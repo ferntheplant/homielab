@@ -10,6 +10,7 @@ glance.Dockerfile              glance + tzdata (built by the homie stack)
 glance-config/                 dashboard config, mounted into glance
 launchctl-agent-monitor.py     tiny HTTP server: status of host-side agents, for the dashboard
 launchd/                       launchd agents for this repo (copy into ~/Library/LaunchAgents)
+Nanobrewfile                   host packages for this server (nanobrew)
 scripts/                       snapshot + firewall helpers
 stacks/<name>/                 one docker compose project per stack (+ .env.tpl: 1Password refs)
 stacks/manage.sh               start/stop/update everything
@@ -91,6 +92,18 @@ Karakeep rebuilds the search index (Admin → Background jobs → reindex).
 
 Log: `~/Library/Logs/lil-homie/snapshot.log`
 
+## Host packages (nanobrew)
+
+Shell tools come from the dotfiles core list (`~/dotfiles/.Nanobrewfile`, server profile). This
+repo's `Nanobrewfile` adds the server packages:
+
+```bash
+nb bundle install ~/dotfiles/.Nanobrewfile
+nb bundle install ~/lil-homie/Nanobrewfile
+```
+
+Scripts and agents put `/opt/nanobrew/prefix/bin` on `PATH` for `op` and `tailscale`.
+
 ## Host-side services (launchd)
 
 Install or reload an agent from `launchd/`:
@@ -104,8 +117,9 @@ launchctl bootout gui/$(id -u)/<label> 2>/dev/null; launchctl bootstrap gui/$(id
 - `dev.fjorn.lil-homie-snapshot`: nightly data snapshot
 - `dev.fjorn.lil-homie-update`: weekly image update
 - `dev.fjorn.bbctl-imessage`: Beeper iMessage bridge (see below)
-- `homebrew.mxcl.beszel-agent`: Beszel host agent (`brew services`)
+- `dev.fjorn.beszel-agent`: Beszel host agent (`scripts/beszel-agent.sh` loads `~/.config/beszel/beszel-agent.env`)
 - `dev.fjorn.pf-syncthing` (LaunchDaemon, root): Syncthing firewall rule, see [Syncthing](#syncthing)
+- `dev.fjorn.tailscaled` (LaunchDaemon, root): Tailscale, see [Tailscale](#tailscale)
 
 Ollama runs from `Ollama.app` (it self-updates). Karakeep uses it for tagging and summaries, see [Karakeep](#karakeep).
 
@@ -118,6 +132,14 @@ All access is via Tailscale. The host is `lil-homie.tail8cc0d3.ts.net`. Serve pu
 
 `./stacks/manage.sh serve` applies this (the mapping lives at the top of `manage.sh`). If
 `tailscale serve status` shows `No serve config`, run it once interactively to get the one-time consent flow.
+
+`tailscaled` runs as the `dev.fjorn.tailscaled` LaunchDaemon from a root-owned copy of the
+nanobrew binary. After `nb upgrade tailscale`, install the new binary (the tailnet drops for a few
+seconds; the script logs to `/var/log/lil-homie-tailscaled-install.log`):
+
+```bash
+sudo ~/lil-homie/scripts/install-tailscaled-daemon.sh
+```
 
 If MagicDNS doesn't resolve on a CLI-only client, add a resolver file:
 

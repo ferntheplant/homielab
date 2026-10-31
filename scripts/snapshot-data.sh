@@ -11,7 +11,7 @@
 
 set -euo pipefail
 
-export PATH="$HOME/.orbstack/bin:/opt/homebrew/bin:$PATH"
+export PATH="$HOME/.orbstack/bin:/opt/nanobrew/prefix/bin:$PATH"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 set -a
 source "${REPO_DIR}/.env.shared"

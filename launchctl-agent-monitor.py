@@ -25,7 +25,7 @@ SERVICES = [
         "url": "http://127.0.0.1:11434/api/version",
     },
     {
-        "label": "homebrew.mxcl.beszel-agent",
+        "label": "dev.fjorn.beszel-agent",
         "display_name": "Beszel Agent",
     }
     # Add more services here as needed

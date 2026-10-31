@@ -8,7 +8,7 @@
     <string>update</string>
   </array>
   <key>EnvironmentVariables</key><dict>
-    <key>PATH</key><string>/Users/fjorn/.orbstack/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>PATH</key><string>/Users/fjorn/.orbstack/bin:/opt/nanobrew/prefix/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
   </dict>
   <!-- Weekly, Sunday 04:30 (after the nightly snapshot and backup) -->
   <key>StartCalendarInterval</key><dict>
