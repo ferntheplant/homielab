@@ -104,6 +104,9 @@ nb bundle install ~/lil-homie/Nanobrewfile
 
 Scripts and agents put `/opt/nanobrew/prefix/bin` on `PATH` for `op` and `tailscale`.
 
+OrbStack and Ollama are not in a package manager: each app updates itself. (nanobrew will not
+install over an existing app, and reinstalling OrbStack stops every container.)
+
 ## Host-side services (launchd)
 
 Install or reload an agent from `launchd/`:
