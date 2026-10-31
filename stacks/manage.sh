@@ -1,14 +1,19 @@
 #!/bin/bash
-
 # Script to manage all docker-compose stacks
-# Usage: ./manage.sh [start|stop|restart|status|logs] [stack]
+# Usage: ./manage.sh [start|stop|restart|status|logs|update|serve] [stack]
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-STACKS=("caddy" "beeper" "homie" "karakeep" "yams")
-TAILSCALE_HOST="lil-homie.tail8cc0d3.ts.net"
-TAILSCALE_SERVE_PORTS=("8080" "3003" "3001")
+REPO_DIR="$(dirname "${SCRIPT_DIR}")"
+STACKS=("caddy" "beeper" "homie" "karakeep")
+SHARED_ENV_FILE="${REPO_DIR}/.env.shared"
+
+# Tailscale Serve: tailnet HTTPS port -> local target. Every target binds to 127.0.0.1 only.
+TAILSCALE_SERVE=(
+    "443=http://127.0.0.1:8080"  # caddy (dashboard + subpaths)
+    "3003=http://127.0.0.1:3000" # karakeep (needs its own origin for the mobile app/extension)
+)
 
 # Colors for output
 RED='\033[0;31m'
@@ -16,92 +21,55 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-SHARED_ENV_FILE="/Users/fjorn/lil-homie/.env.shared"
+# Secrets live in the 1Password "lil-homie" vault. Each stack's .env.tpl maps env vars to op:// refs,
+# and `op run` resolves them for compose. The read-only service account token is in the login keychain.
+OP_KEYCHAIN_SERVICE="lil-homie-op"
+
+load_op_token() {
+    if [[ -n "${OP_SERVICE_ACCOUNT_TOKEN:-}" ]]; then
+        return 0
+    fi
+    # Over SSH the login keychain is locked; launchd jobs in the GUI session read it without a prompt
+    if ! OP_SERVICE_ACCOUNT_TOKEN=$(security find-generic-password -s "${OP_KEYCHAIN_SERVICE}" -w 2>/dev/null); then
+        echo -e "${YELLOW}Unlock the login keychain to read the 1Password token:${NC}" >&2
+        security unlock-keychain "${HOME}/Library/Keychains/login.keychain-db" >&2
+        OP_SERVICE_ACCOUNT_TOKEN=$(security find-generic-password -s "${OP_KEYCHAIN_SERVICE}" -w)
+    fi
+    export OP_SERVICE_ACCOUNT_TOKEN
+    # Service account only: skip the desktop-app integration and cache daemon. In the GUI session
+    # (launchd) they trigger macOS privacy prompts, and op blocks until someone answers them.
+    export OP_BIOMETRIC_UNLOCK_ENABLED=false
+    export OP_CACHE=false
+}
 
 compose_cmd() {
-    local env_args=(--env-file "${SHARED_ENV_FILE}")
-    if [[ -f ".env" ]]; then
-        env_args+=(--env-file ".env")
+    if [[ -f ".env.tpl" ]]; then
+        load_op_token
+        op run --env-file .env.tpl -- docker compose --env-file "${SHARED_ENV_FILE}" "$@"
+    elif [[ -f ".env" ]]; then
+        docker compose --env-file "${SHARED_ENV_FILE}" --env-file .env "$@"
+    else
+        docker compose --env-file "${SHARED_ENV_FILE}" "$@"
     fi
-    docker compose "${env_args[@]}" "$@"
 }
 
-tailscale_available() {
-    command -v tailscale >/dev/null 2>&1
-}
-
+# tailscale serve can block on an interactive prompt if Serve is not enabled for the tailnet
 run_with_timeout() {
     local seconds=$1
     shift
-    if command -v python3 >/dev/null 2>&1; then
-        python3 - "$seconds" "$@" <<'PY'
-import subprocess
-import sys
-
-timeout = float(sys.argv[1])
-cmd = sys.argv[2:]
-p = subprocess.Popen(
-    cmd,
-    stdin=subprocess.DEVNULL,
-    stdout=subprocess.DEVNULL,
-    stderr=subprocess.DEVNULL,
-)
-try:
-    p.wait(timeout=timeout)
-except subprocess.TimeoutExpired:
-    p.terminate()
-    try:
-        p.wait(timeout=1)
-    except subprocess.TimeoutExpired:
-        p.kill()
-sys.exit(0)
-PY
-    else
-        "$@" </dev/null >/dev/null 2>&1 || true
-    fi
-}
-
-serve_on() {
-    local port=$1
-    if [[ "$port" == "8080" ]]; then
-        # Default HTTPS on :443 -> local 8080
-        run_with_timeout 3 tailscale serve --bg "${port}" </dev/null >/dev/null 2>&1 || true
-    else
-        # Explicit HTTPS port -> same local port
-        run_with_timeout 3 tailscale serve --bg --https "${port}" "${port}" </dev/null >/dev/null 2>&1 || true
-    fi
-}
-
-serve_off() {
-    local port=$1
-    if [[ "$port" == "8080" ]]; then
-        run_with_timeout 3 tailscale serve clear https:443 </dev/null >/dev/null 2>&1 || true
-    else
-        run_with_timeout 3 tailscale serve clear "https:${port}" </dev/null >/dev/null 2>&1 || true
-    fi
+    perl -e 'alarm shift; exec @ARGV' "$seconds" "$@" </dev/null >/dev/null 2>&1 || true
 }
 
 ensure_tailscale_serve() {
-    if ! tailscale_available; then
+    if ! command -v tailscale >/dev/null 2>&1; then
         echo -e "${YELLOW}tailscale not found; skipping serve setup.${NC}"
         return 0
     fi
     echo -e "${YELLOW}→ tailscale serve${NC}"
-    for port in "${TAILSCALE_SERVE_PORTS[@]}"; do
-        serve_on "${port}"
+    for entry in "${TAILSCALE_SERVE[@]}"; do
+        run_with_timeout 5 tailscale serve --bg --https="${entry%%=*}" "${entry#*=}"
     done
-    echo -e "${YELLOW}If Serve is not enabled for this tailnet, run: tailscale serve --bg 8080 (and 3003/3001)${NC}"
-    echo -e "${GREEN}tailscale serve configured for ${TAILSCALE_HOST}.${NC}"
-}
-
-disable_tailscale_serve() {
-    if ! tailscale_available; then
-        return 0
-    fi
-    echo -e "${YELLOW}→ tailscale serve off${NC}"
-    for port in "${TAILSCALE_SERVE_PORTS[@]}"; do
-        serve_off "${port}"
-    done
+    tailscale serve status
 }
 
 is_valid_stack() {
@@ -123,170 +91,100 @@ require_stack() {
     fi
 }
 
-# Function to run docker-compose command on all stacks
-run_on_all() {
-    local command=$1
-    local shift_args=("${@:2}")
-
-    for stack in "${STACKS[@]}"; do
-        echo -e "${YELLOW}→ ${stack}${NC}"
-        cd "${SCRIPT_DIR}/${stack}"
-        compose_cmd $command "${shift_args[@]}"
-    done
-}
-
-# Function to start a single stack
-start_one() {
-    local stack=$1
-    require_stack "$stack"
-    echo -e "${GREEN}Starting ${stack}...${NC}"
-    echo -e "${YELLOW}→ ${stack}${NC}"
-    cd "${SCRIPT_DIR}/${stack}"
-    compose_cmd up -d
-    if [[ "$stack" == "caddy" || "$stack" == "homie" ]]; then
-        ensure_tailscale_serve
+# Resolve the target stacks: the one named, or all of them (caddy first, it owns the network)
+target_stacks() {
+    if [[ -n "${1:-}" ]]; then
+        require_stack "$1"
+        echo "$1"
+    else
+        echo "${STACKS[@]}"
     fi
-    echo -e "${GREEN}${stack} started!${NC}"
 }
 
-# Function to start all stacks
-start_all() {
-    echo -e "${GREEN}Starting all stacks...${NC}"
-    # Start caddy first to create the network
-    echo -e "${YELLOW}→ caddy${NC}"
-    cd "${SCRIPT_DIR}/caddy"
-    compose_cmd up -d
-
-    # Then start the rest
-    for stack in "${STACKS[@]:1}"; do
+start_stacks() {
+    echo -e "${GREEN}Starting: $*${NC}"
+    for stack in "$@"; do
         echo -e "${YELLOW}→ ${stack}${NC}"
         cd "${SCRIPT_DIR}/${stack}"
-        compose_cmd up -d
+        compose_cmd up -d --remove-orphans
     done
     ensure_tailscale_serve
-    echo -e "${GREEN}All stacks started!${NC}"
 }
 
-# Function to stop a single stack
-stop_one() {
-    local stack=$1
-    require_stack "$stack"
-    echo -e "${RED}Stopping ${stack}...${NC}"
-    echo -e "${YELLOW}→ ${stack}${NC}"
-    cd "${SCRIPT_DIR}/${stack}"
-    compose_cmd down
-    if [[ "$stack" == "caddy" ]]; then
-        serve_off "8080"
-        serve_off "3003"
-    fi
-    if [[ "$stack" == "homie" ]]; then
-        serve_off "3001"
-    fi
-    echo -e "${GREEN}${stack} stopped!${NC}"
-}
-
-# Function to stop all stacks
-stop_all() {
-    echo -e "${RED}Stopping all stacks...${NC}"
+stop_stacks() {
+    echo -e "${RED}Stopping: $*${NC}"
     # Stop in reverse order (caddy last to avoid network issues)
-    for ((idx=${#STACKS[@]}-1 ; idx>=0 ; idx--)); do
-        stack="${STACKS[$idx]}"
-        echo -e "${YELLOW}→ ${stack}${NC}"
-        cd "${SCRIPT_DIR}/${stack}"
+    local stacks=("$@")
+    for ((idx=${#stacks[@]}-1 ; idx>=0 ; idx--)); do
+        echo -e "${YELLOW}→ ${stacks[$idx]}${NC}"
+        cd "${SCRIPT_DIR}/${stacks[$idx]}"
         compose_cmd down
     done
-    disable_tailscale_serve
-    echo -e "${GREEN}All stacks stopped!${NC}"
 }
 
-# Function to restart a single stack
-restart_one() {
-    local stack=$1
-    require_stack "$stack"
-    echo -e "${YELLOW}Restarting ${stack}...${NC}"
-    stop_one "$stack"
-    start_one "$stack"
-}
-
-# Function to restart all stacks
-restart_all() {
-    echo -e "${YELLOW}Restarting all stacks...${NC}"
-    stop_all
-    start_all
-}
-
-# Function to show status of all stacks
-status_all() {
-    echo -e "${GREEN}Status of all stacks:${NC}"
-    for stack in "${STACKS[@]}"; do
+status_stacks() {
+    for stack in "$@"; do
         echo -e "\n${YELLOW}=== ${stack} ===${NC}"
         cd "${SCRIPT_DIR}/${stack}"
         compose_cmd ps
     done
 }
 
-# Function to show logs
-logs_all() {
-    local follow=${1:-""}
-    echo -e "${GREEN}Showing logs for all stacks${NC}"
+logs_stacks() {
+    local follow=$1
+    shift
     echo -e "${YELLOW}Press Ctrl+C to exit${NC}\n"
-
-    for stack in "${STACKS[@]}"; do
+    for stack in "$@"; do
         echo -e "\n${YELLOW}=== ${stack} ===${NC}"
         cd "${SCRIPT_DIR}/${stack}"
         compose_cmd logs $follow
     done
 }
 
-logs_one() {
-    local stack=$1
-    local follow=${2:-""}
-    require_stack "$stack"
-    echo -e "${GREEN}Showing logs for ${stack}${NC}"
-    echo -e "${YELLOW}Press Ctrl+C to exit${NC}\n"
-    cd "${SCRIPT_DIR}/${stack}"
-    compose_cmd logs $follow
+# Pull new images, rebuild local images on fresh bases, recreate changed containers
+update_stacks() {
+    echo -e "${GREEN}Updating: $*${NC}"
+    "${REPO_DIR}/scripts/snapshot-data.sh"
+    for stack in "$@"; do
+        echo -e "${YELLOW}→ ${stack}${NC}"
+        cd "${SCRIPT_DIR}/${stack}"
+        compose_cmd pull --ignore-buildable
+        compose_cmd build --pull
+        compose_cmd up -d --remove-orphans
+    done
+    docker image prune -f
 }
 
 # Main command handling
 case "${1:-}" in
     start)
-        if [[ -n "${2:-}" ]]; then
-            start_one "${2}"
-        else
-            start_all
-        fi
+        start_stacks $(target_stacks "${2:-}")
         ;;
     stop)
-        if [[ -n "${2:-}" ]]; then
-            stop_one "${2}"
-        else
-            stop_all
-        fi
+        stop_stacks $(target_stacks "${2:-}")
         ;;
     restart)
-        if [[ -n "${2:-}" ]]; then
-            restart_one "${2}"
-        else
-            restart_all
-        fi
+        stop_stacks $(target_stacks "${2:-}")
+        start_stacks $(target_stacks "${2:-}")
         ;;
     status)
-        status_all
+        status_stacks $(target_stacks "${2:-}")
         ;;
     logs)
-        if [[ -n "${2:-}" ]]; then
-            if is_valid_stack "${2}"; then
-                logs_one "${2}" "${3:-}"
-            else
-                logs_all "${2:-}"
-            fi
+        if [[ -n "${2:-}" ]] && is_valid_stack "${2}"; then
+            logs_stacks "${3:-}" "${2}"
         else
-            logs_all "${2:-}"
+            logs_stacks "${2:-}" "${STACKS[@]}"
         fi
         ;;
+    update)
+        update_stacks $(target_stacks "${2:-}")
+        ;;
+    serve)
+        ensure_tailscale_serve
+        ;;
     *)
-        echo "Usage: $0 {start|stop|restart|status|logs [--follow]} [stack]"
+        echo "Usage: $0 {start|stop|restart|status|logs [--follow]|update|serve} [stack]"
         echo ""
         echo "Commands:"
         echo "  start   - Start all stacks or a single stack"
@@ -294,6 +192,8 @@ case "${1:-}" in
         echo "  restart - Restart all stacks or a single stack"
         echo "  status  - Show status of all stacks"
         echo "  logs    - Show logs from all stacks (add --follow for tail)"
+        echo "  update  - Snapshot data, pull/rebuild images, recreate containers, prune old images"
+        echo "  serve   - (Re)apply the Tailscale Serve config"
         echo ""
         echo "Stacks: ${STACKS[*]}"
         exit 1

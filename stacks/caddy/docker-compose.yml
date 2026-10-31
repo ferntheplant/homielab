@@ -2,43 +2,13 @@ services:
   caddy:
     container_name: caddy
     restart: unless-stopped
-    image: caddy:latest
+    image: caddy:2
     ports:
-      - "127.0.0.1:3003:3003"
       - "127.0.0.1:8080:80"
     volumes:
       - ../../Caddyfile:/etc/caddy/Caddyfile
       - ${DATA_PATH}/caddy_data:/data
       - ${DATA_PATH}/caddy_config:/config
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
-    networks:
-      - caddy_network
-
-  portainer:
-    image: portainer/portainer-ce
-    container_name: portainer
-    restart: unless-stopped
-    ports:
-      - 9000:9000
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${DATA_PATH}/portainer:/data
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
-    networks:
-      - caddy_network
-
-  watchtower:
-    image: containrrr/watchtower
-    container_name: watchtower
-    restart: unless-stopped
-    environment:
-      - WATCHTOWER_LABEL_ENABLE=true
-      - WATCHTOWER_CLEANUP=true
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - caddy_network
 

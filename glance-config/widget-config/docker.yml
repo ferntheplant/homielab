@@ -1,5 +1,6 @@
 - type: docker-containers
   title: Docker
+  sock-path: tcp://socket-proxy:2375
   hide-by-default: false
   containers:
     caddy:
@@ -18,8 +19,6 @@
     glances-ical:
       name: glance-gcal
       icon: sh:google-calendar
-    speedtest-tracker:
-      icon: sh:speedtest-tracker
     syncthing:
       icon: sh:syncthing
     backrest:
@@ -34,26 +33,5 @@
     restic-glance-extension:
       name: glance-restic
       icon: https://cdn.jsdelivr.net/gh/selfhst/icons/webp/restic.webp
-    uptime-kuma:
-      name: uptime-kuma
-      icon: sh:uptime-kuma
     glance:
       hide: true
-    jellyfin:
-      icon: sh:jellyfin
-    sonarr:
-      icon: sh:sonarr
-    radarr:
-      icon: sh:radarr
-    lidarr:
-      icon: sh:lidarr
-    bazarr:
-      icon: sh:bazarr
-    prowlarr:
-      icon: sh:prowlarr
-    qbittorrent:
-      icon: sh:qbittorrent
-    portainer:
-      icon: sh:portainer
-    watchtower:
-      icon: sh:watchtower

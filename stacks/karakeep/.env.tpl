@@ -1,0 +1,15 @@
+# Resolved by `op run` in stacks/manage.sh. Values live in 1Password: lil-homie/karakeep
+KARAKEEP_VERSION=op://lil-homie/karakeep/KARAKEEP_VERSION
+DISABLE_SIGNUPS=op://lil-homie/karakeep/DISABLE_SIGNUPS
+NEXTAUTH_URL=op://lil-homie/karakeep/NEXTAUTH_URL
+NEXTAUTH_SECRET=op://lil-homie/karakeep/NEXTAUTH_SECRET
+MEILI_MASTER_KEY=op://lil-homie/karakeep/MEILI_MASTER_KEY
+OLLAMA_BASE_URL=op://lil-homie/karakeep/OLLAMA_BASE_URL
+INFERENCE_TEXT_MODEL=op://lil-homie/karakeep/INFERENCE_TEXT_MODEL
+INFERENCE_IMAGE_MODEL=op://lil-homie/karakeep/INFERENCE_IMAGE_MODEL
+EMBEDDING_TEXT_MODEL=op://lil-homie/karakeep/EMBEDDING_TEXT_MODEL
+INFERENCE_CONTEXT_LENGTH=op://lil-homie/karakeep/INFERENCE_CONTEXT_LENGTH
+INFERENCE_NUM_WORKERS=op://lil-homie/karakeep/INFERENCE_NUM_WORKERS
+INFERENCE_ENABLE_AUTO_SUMMARIZATION=op://lil-homie/karakeep/INFERENCE_ENABLE_AUTO_SUMMARIZATION
+INFERENCE_JOB_TIMEOUT_SEC=op://lil-homie/karakeep/INFERENCE_JOB_TIMEOUT_SEC
+CRAWLER_NUM_WORKERS=op://lil-homie/karakeep/CRAWLER_NUM_WORKERS

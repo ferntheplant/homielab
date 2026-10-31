@@ -33,8 +33,6 @@ pages:
 
           - $include: widget-config/weather.yml
 
-          - $include: widget-config/spotify.yml
-
           - type: custom-api
             height: 300px
             title: Random Dog
@@ -52,7 +50,30 @@ pages:
           - type: group
             title: Availability
             widgets:
-              - $include: widget-config/uptime-kuma.yml
+              - type: monitor
+                cache: 1m
+                title: Services
+                sites:
+                  - title: karakeep
+                    url: https://lil-homie.tail8cc0d3.ts.net:3003
+                    check-url: http://karakeep-web:3000/api/health
+                    icon: sh:karakeep
+                  - title: backrest
+                    url: https://lil-homie.tail8cc0d3.ts.net/backrest/
+                    check-url: http://backrest:9898
+                    icon: sh:backrest
+                  - title: syncthing
+                    url: https://lil-homie.tail8cc0d3.ts.net/syncthing/
+                    check-url: http://syncthing:8384/rest/noauth/health
+                    icon: sh:syncthing
+                  - title: beszel
+                    url: https://lil-homie.tail8cc0d3.ts.net/beszel
+                    check-url: http://beszel:8090/api/health
+                    icon: sh:beszel
+                  - title: dozzle
+                    url: https://lil-homie.tail8cc0d3.ts.net/logs
+                    check-url: http://dozzle:8080/logs/healthcheck
+                    icon: sh:dozzle
               - $include: widget-config/docker.yml
               - $include: widget-config/launchctl-agents.yml
               - type: monitor
@@ -74,5 +95,3 @@ pages:
             allow-potentially-dangerous-html: true
 
           - $include: widget-config/beszel.yml
-
-          - $include: widget-config/speedtest.yml

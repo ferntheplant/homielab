@@ -6,9 +6,6 @@
       - title: karakeep
         url: https://lil-homie.tail8cc0d3.ts.net:3003
         icon: sh:karakeep
-      - title: uptime
-        url: https://lil-homie.tail8cc0d3.ts.net:3001
-        icon: sh:uptime-kuma
 
     - title: management
       links:
@@ -21,30 +18,4 @@
       - title: metrics
         url: https://lil-homie.tail8cc0d3.ts.net/beszel
         icon: sh:beszel
-      - title: portainer
-        url: https://lil-homie.tail8cc0d3.ts.net/portainer
-        icon: sh:portainer
 
-    - title: media
-      links:
-      - title: jellyfin
-        url: https://lil-homie.tail8cc0d3.ts.net/jellyfin
-        icon: sh:jellyfin
-      - title: sonarr
-        url: https://lil-homie.tail8cc0d3.ts.net/sonarr
-        icon: sh:sonarr
-      - title: radarr
-        url: https://lil-homie.tail8cc0d3.ts.net/radarr
-        icon: sh:radarr
-      - title: lidarr
-        url: https://lil-homie.tail8cc0d3.ts.net/lidarr
-        icon: sh:lidarr
-      - title: bazarr
-        url: https://lil-homie.tail8cc0d3.ts.net/bazarr
-        icon: sh:bazarr
-      - title: prowlarr
-        url: https://lil-homie.tail8cc0d3.ts.net/prowlarr
-        icon: sh:prowlarr
-      - title: qbittorrent
-        url: https://lil-homie.tail8cc0d3.ts.net/qbittorrent
-        icon: sh:qbittorrent

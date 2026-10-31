@@ -1,11 +1,3 @@
-:3003 {
-  reverse_proxy karakeep-web:3000
-}
-
-:3001 {
-  reverse_proxy uptime-kuma:3001
-}
-
 :80 {
   handle /logs* {
     reverse_proxy dozzle:8080
@@ -31,68 +23,6 @@
 
   handle_path /backrest* {
     reverse_proxy backrest:9898
-  }
-
-  @jellyfin_root path /jellyfin
-  redir @jellyfin_root /jellyfin/ 308
-
-  handle_path /jellyfin* {
-    reverse_proxy jellyfin:8096
-  }
-
-  @sonarr_root path /sonarr
-  redir @sonarr_root /sonarr/ 308
-
-  handle /sonarr* {
-    reverse_proxy sonarr:8989
-  }
-
-  @radarr_root path /radarr
-  redir @radarr_root /radarr/ 308
-
-  handle /radarr* {
-    reverse_proxy radarr:7878
-  }
-
-  @lidarr_root path /lidarr
-  redir @lidarr_root /lidarr/ 308
-
-  handle /lidarr* {
-    reverse_proxy lidarr:8686
-  }
-
-  @bazarr_root path /bazarr
-  redir @bazarr_root /bazarr/ 308
-
-  handle /bazarr* {
-    reverse_proxy bazarr:6767
-  }
-
-  @prowlarr_root path /prowlarr
-  redir @prowlarr_root /prowlarr/ 308
-
-  handle /prowlarr* {
-    reverse_proxy prowlarr:9696
-  }
-
-  @qbittorrent_root path /qbittorrent
-  redir @qbittorrent_root /qbittorrent/ 308
-
-  handle_path /qbittorrent* {
-    reverse_proxy gluetun:8085 {
-      header_up X-Forwarded-Proto https
-      header_up X-Forwarded-Host {host}
-    }
-  }
-
-  @portainer_root path /portainer
-  redir @portainer_root /portainer/ 308
-
-  handle_path /portainer* {
-    reverse_proxy portainer:9000 {
-      header_up X-Forwarded-Proto https
-      header_up X-Forwarded-Host {host}
-    }
   }
 
   handle /* {

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- LaunchDaemon (root). Installed by scripts/install-pf-daemon.sh, not copied by hand. -->
+<plist version="1.0"><dict>
+  <key>Label</key><string>dev.fjorn.pf-syncthing</string>
+  <key>ProgramArguments</key><array>
+    <string>/usr/local/libexec/lil-homie/setup-pf-tailscale-syncthing.sh</string>
+  </array>
+  <!-- At boot, and again when a macOS update rewrites /etc/pf.conf -->
+  <key>RunAtLoad</key><true/>
+  <key>WatchPaths</key><array>
+    <string>/private/etc/pf.conf</string>
+  </array>
+  <key>StandardOutPath</key><string>/var/log/lil-homie-pf.log</string>
+  <key>StandardErrorPath</key><string>/var/log/lil-homie-pf.log</string>
+</dict></plist>

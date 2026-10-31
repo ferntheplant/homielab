@@ -7,6 +7,7 @@ Usage: python3 launchctl_status_server.py
 import json
 import re
 import subprocess
+import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 PORT = 8765
@@ -18,8 +19,10 @@ SERVICES = [
         "display_name": "iMessage Bridge",
     },
     {
-        "label": "dev.fjorn.ollama",
+        # Ollama.app manages its own process, so check the API instead of launchctl
+        "label": "Ollama.app :11434",
         "display_name": "Ollama",
+        "url": "http://127.0.0.1:11434/api/version",
     },
     {
         "label": "homebrew.mxcl.beszel-agent",
@@ -87,13 +90,32 @@ def check_launchctl_service(label: str) -> dict:
         return {"running": False, "loaded": False, "status": "error", "error": str(e)}
 
 
+def check_http_service(url: str) -> dict:
+    """
+    Check if an HTTP endpoint responds with a 2xx status.
+    """
+    try:
+        with urllib.request.urlopen(url, timeout=2) as response:
+            ok = 200 <= response.status < 300
+            return {
+                "running": ok,
+                "loaded": True,
+                "status": "running" if ok else f"http {response.status}",
+            }
+    except Exception as e:
+        return {"running": False, "loaded": False, "status": "unreachable", "error": str(e)}
+
+
 class StatusHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/status":
             services_status = []
 
             for service in SERVICES:
-                status = check_launchctl_service(service["label"])
+                if "url" in service:
+                    status = check_http_service(service["url"])
+                else:
+                    status = check_launchctl_service(service["label"])
                 services_status.append(
                     {
                         "label": service["label"],

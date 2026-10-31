@@ -1,42 +1,30 @@
 services:
   discord:
     image: ghcr.io/beeper/bridge-manager
-    env_file:
-      - ../../.env.shared
-      - ./.env
     restart: unless-stopped
     container_name: beeper-discord
     volumes:
       - ${DATA_PATH}/beeper-discord:/data
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
     environment:
       BRIDGE_NAME: sh-discord
+      MATRIX_ACCESS_TOKEN: ${MATRIX_ACCESS_TOKEN}
 
   signal:
     image: ghcr.io/beeper/bridge-manager
-    env_file:
-      - ../../.env.shared
-      - ./.env
     restart: unless-stopped
     container_name: beeper-signal
     volumes:
       - ${DATA_PATH}/beeper-signal:/data
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
     environment:
       BRIDGE_NAME: sh-signal
+      MATRIX_ACCESS_TOKEN: ${MATRIX_ACCESS_TOKEN}
 
   facebook:
     image: ghcr.io/beeper/bridge-manager
-    env_file:
-      - ../../.env.shared
-      - ./.env
     restart: unless-stopped
     container_name: beeper-facebook
     volumes:
       - ${DATA_PATH}/beeper-facebook:/data
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
     environment:
       BRIDGE_NAME: sh-meta
+      MATRIX_ACCESS_TOKEN: ${MATRIX_ACCESS_TOKEN}
