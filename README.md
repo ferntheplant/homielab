@@ -59,7 +59,10 @@ for the login password once.
 
 To add or change a secret:
 
-1. Edit the stack's item in 1Password (add a field named after the variable).
+1. Edit the stack's item in 1Password (add a field named after the variable). From the CLI on the server, unset
+   `OP_SERVICE_ACCOUNT_TOKEN` so `op` uses your own account through the 1Password app (Settings → Developer →
+   Integrate with 1Password CLI; quit and reopen the app after turning it on), e.g.
+   `op item edit karakeep --vault lil-homie 'VAR[text]=value'`. Each write asks for Touch ID on the server.
 2. Add `VAR=op://lil-homie/<stack>/VAR` to `stacks/<stack>/.env.tpl`.
 3. Add `VAR: ${VAR}` to the service that needs it.
 4. Run `./stacks/manage.sh start <stack>`.
@@ -121,6 +124,7 @@ launchctl bootout gui/$(id -u)/<label> 2>/dev/null; launchctl bootstrap gui/$(id
 - `dev.fjorn.lil-homie-update`: weekly image update
 - `dev.fjorn.bbctl-imessage`: Beeper iMessage bridge (see below)
 - `dev.fjorn.beszel-agent`: Beszel host agent (`scripts/beszel-agent.sh` loads `~/.config/beszel/beszel-agent.env`)
+- `dev.fjorn.karakeep-classify`: tags Karakeep bookmarks `tool` or `reading` every 5 minutes, see [Karakeep](#karakeep)
 - `dev.fjorn.pf-syncthing` (LaunchDaemon, root): Syncthing firewall rule, see [Syncthing](#syncthing)
 - `dev.fjorn.tailscaled` (LaunchDaemon, root): Tailscale, see [Tailscale](#tailscale)
 
@@ -201,8 +205,8 @@ Served on a dedicated Tailscale Serve port for mobile/extension compatibility: `
 
 ### AI tagging (Ollama)
 
-Karakeep tags, summarizes and reads images with `qwen3.5:4b-16k`, and embeds with `nomic-embed-text-v2-moe`. Two
-non-obvious choices:
+Karakeep summarizes with `qwen3.5:4b-16k` and embeds with `nomic-embed-text-v2-moe`. Its own tagging is off, see
+[Tool / reading classifier](#tool--reading-classifier). Two non-obvious choices:
 
 1. **Karakeep talks to Ollama through its OpenAI-compatible API** (`OPENAI_BASE_URL=<ollama>/v1`, a dummy
    `OPENAI_API_KEY`), not `OLLAMA_BASE_URL`. qwen3.5 thinks by default, which makes a tagging call ~60-110s instead of
@@ -216,6 +220,31 @@ non-obvious choices:
 printf "FROM qwen3.5:4b\nPARAMETER num_ctx 16384\n" > /tmp/Modelfile
 ollama create qwen3.5:4b-16k -f /tmp/Modelfile
 ```
+
+### Semantic search
+
+`EMBEDDING_ENABLE_AUTO_INDEXING=true` and `EMBEDDING_DIMENSIONS=768` (the size `nomic-embed-text-v2-moe` returns)
+turn on the `semantic` and `hybrid` search modes. Karakeep only turns embeddings on by itself for the default OpenAI
+setup. Hybrid search finds a bookmark from a vague description, for example "self-hosted tool for bookmarking sites"
+finds Hister, whose page never says "bookmark". If the embedding model changes, change the dimension to match and
+regenerate the embeddings (Admin → Background jobs).
+
+### Tool / reading classifier
+
+Karakeep's own auto-tagging is **off** for my account (Settings → AI). With a 4B model it ignores curated tags and
+the custom prompt: it invents 4-5 tags per bookmark, so near-duplicate tags pile up (`AI Agents`, `AI Agent`,
+`agent systems`, ...). Instead, `scripts/karakeep-classify.py` (launchd `dev.fjorn.karakeep-classify`, every 5 min)
+asks the same model one question with two answers and attaches `tool` or `reading` through the API. It skips
+bookmarks that already have one of those tags and links the crawler has not fetched yet. About 1.5 s per bookmark.
+
+Smart lists built on the tags: **Tools** (`#tool`), **Reading** (`#reading`), **Read later** (`#reading -is:archived`,
+archive a bookmark when it is read). To fix a wrong kind, swap the tag by hand; the worker never changes a tag.
+
+```bash
+/usr/bin/python3 scripts/karakeep-classify.py --dry-run --limit 10   # classify, print, write nothing
+```
+
+Log: `~/Library/Logs/lil-homie/karakeep-classify.log`
 
 ## Beeper
 

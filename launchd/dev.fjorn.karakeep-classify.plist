@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>dev.fjorn.karakeep-classify</string>
+  <key>ProgramArguments</key><array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/fjorn/lil-homie/scripts/karakeep-classify.py</string>
+  </array>
+  <!-- Every 5 minutes. launchd does not start a second run while one is still going. -->
+  <key>StartInterval</key><integer>300</integer>
+  <key>RunAtLoad</key><true/>
+  <key>ProcessType</key><string>Background</string>
+  <key>StandardOutPath</key><string>/Users/fjorn/Library/Logs/lil-homie/karakeep-classify.log</string>
+  <key>StandardErrorPath</key><string>/Users/fjorn/Library/Logs/lil-homie/karakeep-classify.log</string>
+</dict></plist>
