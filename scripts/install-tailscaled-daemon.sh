@@ -34,7 +34,12 @@ install -o root -g wheel -m 755 "${SOURCE}" "${BIN_DIR}/tailscaled"
 install -o root -g wheel -m 644 "${REPO_DIR}/launchd/${LABEL}.plist" "${PLIST}"
 
 launchctl bootout "system/${OLD_LABEL}" 2>/dev/null || true
-rm -f "/Library/LaunchDaemons/${OLD_LABEL}.plist"
+# Keep the Homebrew plist for a rollback until Homebrew is gone:
+#   sudo launchctl bootout system/dev.fjorn.tailscaled
+#   sudo launchctl bootstrap system /usr/local/libexec/lil-homie/homebrew.mxcl.tailscale.plist
+if [[ -f "/Library/LaunchDaemons/${OLD_LABEL}.plist" ]]; then
+    mv "/Library/LaunchDaemons/${OLD_LABEL}.plist" "${BIN_DIR}/${OLD_LABEL}.plist"
+fi
 launchctl bootout "system/${LABEL}" 2>/dev/null || true
 launchctl bootstrap system "${PLIST}"
 
