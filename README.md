@@ -107,7 +107,7 @@ launchctl bootout gui/$(id -u)/<label> 2>/dev/null; launchctl bootstrap gui/$(id
 - `homebrew.mxcl.beszel-agent`: Beszel host agent (`brew services`)
 - `dev.fjorn.pf-syncthing` (LaunchDaemon, root): Syncthing firewall rule, see [Syncthing](#syncthing)
 
-Ollama runs from `Ollama.app` (it self-updates). Karakeep uses it for tagging and summaries via `OLLAMA_BASE_URL`.
+Ollama runs from `Ollama.app` (it self-updates). Karakeep uses it for tagging and summaries, see [Karakeep](#karakeep).
 
 ## Tailscale
 
@@ -173,6 +173,24 @@ Cloudflare R2 bucket. See [Backups](#backups) for what gets backed up.
 ## Karakeep
 
 Served on a dedicated Tailscale Serve port for mobile/extension compatibility: `https://lil-homie.tail8cc0d3.ts.net:3003/`
+
+### AI tagging (Ollama)
+
+Karakeep tags, summarizes and reads images with `qwen3.5:4b-16k`, and embeds with `nomic-embed-text-v2-moe`. Two
+non-obvious choices:
+
+1. **Karakeep talks to Ollama through its OpenAI-compatible API** (`OPENAI_BASE_URL=<ollama>/v1`, a dummy
+   `OPENAI_API_KEY`), not `OLLAMA_BASE_URL`. qwen3.5 thinks by default, which makes a tagging call ~60-110s instead of
+   ~2s and can use up the 2048-token output budget (empty response). Karakeep can only turn thinking off through
+   `OPENAI_REASONING_EFFORT=none`, which its Ollama client does not send.
+2. **`qwen3.5:4b-16k` is a local alias** with `num_ctx 16384`. The OpenAI API has no context-length field, so without
+   it Ollama loads the model at 4096 tokens and cuts long articles. Keep it equal to `INFERENCE_CONTEXT_LENGTH`.
+   Recreate it after pulling a new `qwen3.5:4b`:
+
+```bash
+printf "FROM qwen3.5:4b\nPARAMETER num_ctx 16384\n" > /tmp/Modelfile
+ollama create qwen3.5:4b-16k -f /tmp/Modelfile
+```
 
 ## Beeper
 
