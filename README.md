@@ -150,6 +150,22 @@ All access is via Tailscale. The server is `micro-homie.tail8cc0d3.ts.net`. Serv
 `.env.shared` holds the tailnet names (`TS_HOST`, `LIL_HOMIE_HOST`). The compose files and the Glance config read
 them, so a rename is a one-line change.
 
+## Rex
+
+Rex runs on micro-homie as the **login server** (`rex-login-server.service`), not the package's default shared
+server. It identifies callers by their Tailscale login and runs their terminals as `fjorn`. Tailscale Serve publishes
+it on port 7297, because 443 is the dashboard. `scripts/setup-rex-login-server.sh` (run with sudo) sets this up.
+
+In Rex for Mac, choose **Add Remote Host…** and enter the full address with the port. A bare hostname makes Rex try
+443 first:
+
+```
+https://micro-homie.tail8cc0d3.ts.net:7297
+```
+
+The accounts file is `/etc/rex/accounts.jsonc` and needs `"version": 1`. Its server log is
+`sudo journalctl -u rex-login-server`.
+
 ## SSH
 
 Using a classic SSH pub/priv key setup to SSH into the boxes over the tailnet. On lil-homie I had to disable async
