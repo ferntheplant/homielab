@@ -275,6 +275,13 @@ key) and `TOKEN` (from "Add system" in the hub).
 - micro-homie: the `beszel-agent` container, `HUB_URL=http://127.0.0.1:8090`
 - lil-homie: the `dev.fjorn.beszel-agent` launchd agent, `HUB_URL=https://micro-homie.tail8cc0d3.ts.net/beszel`
 
+Forgot the login password? There is no email setup, so reset it on micro-homie. The script asks for the new
+password and sets it on the PocketBase superuser and on the Beszel user (same email):
+
+```bash
+~/lil-homie/scripts/beszel-reset-password.sh
+```
+
 ## lil-homie (the Mac)
 
 Files in `hosts/lil-homie/`. The Mac keeps:
