@@ -5,7 +5,8 @@ My home server setup, on two boxes:
 - **micro-homie**: a little Intel micro PC (i5-6500, 8 GB RAM, 256 GB SATA SSD) with Debian 13. It runs every
   container stack. Most of this repo is for it.
 - **lil-homie**: the Mac mini in my closet, now mostly a devbox. It keeps only the things that need a Mac or its GPU:
-  Ollama, the Beeper iMessage bridge, a Beszel agent, and a small status server for the dashboard. See
+  llama-server (the local LLM), the Beeper iMessage bridge, a Beszel agent, and a small status server for the
+  dashboard. See
   [lil-homie (the Mac)](#lil-homie-the-mac).
 
 ## Layout
@@ -27,7 +28,7 @@ data/                          all service data ($DATA_PATH, gitignored)
 - everything runs on Docker Engine + compose on micro-homie
 - all data for all services lives in `$DATA_PATH` (`data/`)
 - secrets live in the 1Password `lil-homie` vault (see [Secrets](#secrets)). `.env.shared` holds the settings that
-  are not secret: `DATA_PATH`, the tailnet names, and the Ollama URL
+  are not secret: `DATA_PATH`, the tailnet names, and the llama-server URLs
 - stacks are independent compose projects, all joined by the shared `caddy_network`
 - every published port binds to `127.0.0.1`; the only way in is Tailscale Serve (tailnet only). The one exception is
   Syncthing's sync port `22000`, which binds to the tailnet IP (see [Syncthing](#syncthing))
@@ -200,27 +201,21 @@ Cloudflare R2 bucket. See [Backups](#backups) for what gets backed up. The Backr
 
 Served on a dedicated Tailscale Serve port for mobile/extension compatibility: `https://micro-homie.tail8cc0d3.ts.net:3003/`
 
-### AI tagging (Ollama)
+### AI tagging (llama-server)
 
-Ollama runs on lil-homie (the Mac GPU), see [lil-homie (the Mac)](#lil-homie-the-mac). Karakeep and the classifier
-reach it at `OLLAMA_URL=http://lil-homie:11434`. Use the short name: Ollama answers `403` when the Host header is a
-name it does not know, and it rejects `lil-homie.tail8cc0d3.ts.net`.
+llama-server runs Qwen3.5-4B on lil-homie (the Mac GPU), see
+[`hosts/lil-homie/llm/README.md`](hosts/lil-homie/llm/README.md). Karakeep and the classifier reach it over Tailscale
+Serve:
 
-Karakeep summarizes with `qwen3.5:4b-16k` and embeds with `nomic-embed-text-v2-moe`. Its own tagging is off, see
-[Tool / reading classifier](#tool--reading-classifier). Two non-obvious choices:
+- chat: `LLM_URL=http://lil-homie:8080` (Karakeep `OPENAI_BASE_URL`, with a dummy `OPENAI_API_KEY`)
+- embeddings: `LLM_EMBED_URL=http://lil-homie:8081` (Karakeep `EMBEDDING_OPENAI_BASE_URL`), a small proxy that cuts
+  input to the embedding model's 512 tokens, as Ollama did. llama-server itself rejects longer input.
 
-1. **Karakeep talks to Ollama through its OpenAI-compatible API** (`OPENAI_BASE_URL=<ollama>/v1`, a dummy
-   `OPENAI_API_KEY`), not `OLLAMA_BASE_URL`. qwen3.5 thinks by default, which makes a tagging call ~60-110s instead of
-   ~2s and can use up the 2048-token output budget (empty response). Karakeep can only turn thinking off through
-   `OPENAI_REASONING_EFFORT=none`, which its Ollama client does not send.
-2. **`qwen3.5:4b-16k` is a local alias** with `num_ctx 16384`. The OpenAI API has no context-length field, so without
-   it Ollama loads the model at 4096 tokens and cuts long articles. Keep it equal to `INFERENCE_CONTEXT_LENGTH`.
-   Recreate it on lil-homie after pulling a new `qwen3.5:4b`:
-
-```bash
-printf "FROM qwen3.5:4b\nPARAMETER num_ctx 16384\n" > /tmp/Modelfile
-ollama create qwen3.5:4b-16k -f /tmp/Modelfile
-```
+Karakeep summarizes with `qwen3.5:4b-16k` and embeds with `nomic-embed-text-v2-moe:latest`. These are the old Ollama
+names, kept as aliases in `models.ini`. Its own tagging is off, see
+[Tool / reading classifier](#tool--reading-classifier). Thinking is off on the server, because it makes a tagging call
+~60-110s instead of ~2s and can use up the output budget; `OPENAI_REASONING_EFFORT=none` also asks for that. Each
+request gets 16384 tokens of context (`INFERENCE_CONTEXT_LENGTH`); keep the two equal.
 
 ### Semantic search
 
@@ -302,19 +297,25 @@ password and sets it on the PocketBase superuser and on the Beszel user (same em
 
 Files in `hosts/lil-homie/`. The Mac keeps:
 
-- **Ollama** (`Ollama.app`, it self-updates), for Karakeep and the classifier
+- **llama-server** (`dev.fjorn.llama-server`) with Qwen3.5-4B and the embedding model, for Karakeep, the
+  classifier, and AnyJev decisions (`dev.fjorn.anyjev-decide`, `127.0.0.1:8766`). See
+  [`hosts/lil-homie/llm/README.md`](hosts/lil-homie/llm/README.md). Ollama.app is still installed but stopped,
+  for a rollback
 - **Beeper iMessage bridge** (`dev.fjorn.bbctl-imessage`). `bbctl` needs Full Disk Access to read the iMessage
   database, so it cannot run in a container or on Linux
 - **Beszel agent** (`dev.fjorn.beszel-agent`, `beszel-agent.sh` loads `~/.config/beszel/beszel-agent.env`)
 - **Status server** (`dev.fjorn.launchctl-agent-monitor`) for the dashboard's lil-homie agents widget
 - **Tailscale** (`dev.fjorn.tailscaled` LaunchDaemon)
 
-Tailscale Serve on the Mac publishes two ports to the tailnet. Apply them once (Serve remembers them):
+Tailscale Serve on the Mac publishes these ports to the tailnet. Apply them once (Serve remembers them):
 
 ```bash
-tailscale serve --bg --tcp=11434 tcp://127.0.0.1:11434    # Ollama (TCP: see AI tagging for the Host header)
+tailscale serve --bg --tcp=8080 tcp://127.0.0.1:8080      # llama-server
+tailscale serve --bg --tcp=8081 tcp://127.0.0.1:8081      # embeddings proxy
 tailscale serve --bg --https=8765 http://127.0.0.1:8765   # status server
 ```
+
+The old Ollama forward (`--tcp=11434`) stays until the Ollama rollback window is over.
 
 Install or reload an agent:
 
@@ -324,7 +325,7 @@ launchctl bootout gui/$(id -u)/<label> 2>/dev/null; launchctl bootstrap gui/$(id
 ```
 
 Packages come from nanobrew. Shell tools come from the dotfiles core list (`~/dotfiles/.Nanobrewfile`, server
-profile); `hosts/lil-homie/Nanobrewfile` adds the rest. Ollama is not in a package manager, it updates itself.
+profile); `hosts/lil-homie/Nanobrewfile` adds the rest, including `llama.cpp`.
 
 ```bash
 nb bundle install ~/dotfiles/.Nanobrewfile

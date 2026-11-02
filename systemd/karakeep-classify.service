@@ -1,5 +1,5 @@
 [Unit]
-Description=Tag new Karakeep bookmarks as tool or reading (Ollama on lil-homie)
+Description=Tag new Karakeep bookmarks as tool or reading (llama-server on lil-homie)
 
 [Service]
 Type=oneshot

@@ -1,6 +1,7 @@
 # Nanobrew: lil-homie (Mac) packages, installed after ~/dotfiles/.Nanobrewfile
 # Xcode comes from the App Store and is not listed here.
 brew "henrygd/beszel/beszel-agent"
+brew "llama.cpp"
 brew "pre-commit"
 brew "tailscale"
 cask "1password"

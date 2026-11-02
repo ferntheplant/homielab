@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tag each Karakeep bookmark as "tool" or "reading" with the local Ollama model.
+"""Tag each Karakeep bookmark as "tool" or "reading" with the local Qwen model (llama-server).
 
 Karakeep's own AI tagger is off for this account: with qwen3.5:4b it ignores curated tags and
 invents 4-5 tags per bookmark. One call with a fixed set of answers is far more reliable.
@@ -12,7 +12,7 @@ Runs every 5 minutes from systemd/karakeep-classify.timer.
 
 API key: $KARAKEEP_API_KEY, else op://lil-homie/homie/KARAKEEP_API_KEY through the read-only
 1Password service account token in ~/.config/lil-homie/op-token (same as stacks/manage.sh).
-Ollama runs on lil-homie (the Mac), published on the tailnet by Tailscale Serve.
+llama-server runs on lil-homie (the Mac), published on the tailnet by Tailscale Serve.
 """
 import argparse
 import http.client
@@ -25,8 +25,8 @@ import urllib.error
 import urllib.request
 
 KARAKEEP = os.environ.get("KARAKEEP_URL", "http://127.0.0.1:3000")
-OLLAMA = os.environ.get("OLLAMA_URL", "http://lil-homie:11434")
-MODEL = os.environ.get("CLASSIFY_MODEL", "qwen3.5:4b-16k")
+LLM = os.environ.get("LLM_URL", "http://lil-homie:8080")
+MODEL = os.environ.get("CLASSIFY_MODEL", "qwen3.5-4b")
 OP_TOKEN_FILE = os.path.expanduser("~/.config/lil-homie/op-token")
 
 KINDS = ("tool", "reading")
@@ -103,7 +103,7 @@ def classify(b, text):
     url = content.get("url") or content.get("sourceUrl") or ""
     desc = (content.get("description") or "")[:300]
     msg = f"Title: {title}\nURL: {url}\nDescription: {desc}\nContent start: {text}"
-    out = call("POST", OLLAMA + "/v1/chat/completions", {
+    out = call("POST", LLM + "/v1/chat/completions", {
         "model": MODEL,
         "messages": [{"role": "system", "content": PROMPT}, {"role": "user", "content": msg}],
         # qwen3.5 thinks by default: ~60s per call instead of ~1s
@@ -151,6 +151,6 @@ if __name__ == "__main__":
     try:
         main()
     except (OSError, http.client.HTTPException, subprocess.CalledProcessError) as e:
-        # Karakeep stops during the nightly snapshot and Ollama can be down; the next run retries
+        # Karakeep stops during the nightly snapshot and llama-server can be down; the next run retries
         log(f"error: {e}")
         sys.exit(1)

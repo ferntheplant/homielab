@@ -18,9 +18,12 @@ services:
       NEXTAUTH_URL: https://${TS_HOST}:3003
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       CRAWLER_NUM_WORKERS: ${CRAWLER_NUM_WORKERS}
-      # Ollama on lil-homie (Tailscale Serve) via its OpenAI-compatible /v1 API: only that client can send reasoning_effort=none,
-      # which turns off qwen3.5 thinking (10x slower, and it can use up the output token budget)
-      OPENAI_BASE_URL: ${OLLAMA_URL}/v1
+      # llama-server on lil-homie (Tailscale Serve), OpenAI-compatible /v1 API. Thinking is off on the
+      # server (models.ini); reasoning_effort=none below keeps it off if that changes.
+      OPENAI_BASE_URL: ${LLM_URL}/v1
+      # Embeddings go through embed_proxy.py, which cuts input to the model's 512 tokens as Ollama did
+      # (llama-server rejects longer input). The API key falls back to OPENAI_API_KEY.
+      EMBEDDING_OPENAI_BASE_URL: ${LLM_EMBED_URL}/v1
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_REASONING_EFFORT: ${OPENAI_REASONING_EFFORT}
       INFERENCE_TEXT_MODEL: ${INFERENCE_TEXT_MODEL}

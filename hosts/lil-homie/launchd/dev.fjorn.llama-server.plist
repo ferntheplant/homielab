@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>dev.fjorn.llama-server</string>
+  <!-- Router mode: one child process per model in llm/models.ini (Qwen3.5-4B + nomic embed),
+       both loaded at start. Karakeep reaches it through Tailscale Serve (tcp 8080). -->
+  <key>ProgramArguments</key><array>
+    <string>/opt/nanobrew/prefix/bin/llama-server</string>
+    <string>--models-preset</string><string>/Users/fjorn/lil-homie/hosts/lil-homie/llm/models.ini</string>
+    <string>--models-max</string><string>2</string>
+    <string>--host</string><string>127.0.0.1</string>
+    <string>--port</string><string>8080</string>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/fjorn</string>
+  <key>StandardOutPath</key><string>/Users/fjorn/Library/Logs/llama-server/stdout.log</string>
+  <key>StandardErrorPath</key><string>/Users/fjorn/Library/Logs/llama-server/stderr.log</string>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <!-- a crash loop (bad GGUF path, port taken) retries every 10 s, not every second -->
+  <key>ThrottleInterval</key><integer>10</integer>
+  <key>ProcessType</key><string>Interactive</string>
+</dict></plist>

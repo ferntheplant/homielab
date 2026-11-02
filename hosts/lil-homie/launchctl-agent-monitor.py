@@ -19,10 +19,18 @@ SERVICES = [
         "display_name": "iMessage Bridge",
     },
     {
-        # Ollama.app manages its own process, so check the API instead of launchctl
-        "label": "Ollama.app :11434",
-        "display_name": "Ollama",
-        "url": "http://127.0.0.1:11434/api/version",
+        # launchd can show it running while a model failed to load, so check the API
+        "label": "dev.fjorn.llama-server :8080",
+        "display_name": "llama-server",
+        "url": "http://127.0.0.1:8080/health",
+    },
+    {
+        "label": "dev.fjorn.llm-embed-proxy",
+        "display_name": "Embeddings proxy",
+    },
+    {
+        "label": "dev.fjorn.anyjev-decide",
+        "display_name": "AnyJev decisions",
     },
     {
         "label": "dev.fjorn.beszel-agent",

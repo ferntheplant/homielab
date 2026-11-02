@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>dev.fjorn.anyjev-decide</string>
+  <!-- AnyJev decisions over llama-server: POST http://127.0.0.1:8766/decide. Local only:
+       no Tailscale Serve entry, no auth. Holds no model, only numpy. -->
+  <key>ProgramArguments</key><array>
+    <string>/Users/fjorn/anyjev-venv/bin/python</string>
+    <string>/Users/fjorn/lil-homie/hosts/lil-homie/llm/decide.py</string>
+    <string>serve</string>
+    <string>--port</string><string>8766</string>
+  </array>
+  <key>StandardOutPath</key><string>/Users/fjorn/Library/Logs/llama-server/decide.log</string>
+  <key>StandardErrorPath</key><string>/Users/fjorn/Library/Logs/llama-server/decide.log</string>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>10</integer>
+</dict></plist>
