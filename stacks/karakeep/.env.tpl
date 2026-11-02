@@ -1,10 +1,8 @@
 # Resolved by `op run` in stacks/manage.sh. Values live in 1Password: lil-homie/karakeep
 KARAKEEP_VERSION=op://lil-homie/karakeep/KARAKEEP_VERSION
 DISABLE_SIGNUPS=op://lil-homie/karakeep/DISABLE_SIGNUPS
-NEXTAUTH_URL=op://lil-homie/karakeep/NEXTAUTH_URL
 NEXTAUTH_SECRET=op://lil-homie/karakeep/NEXTAUTH_SECRET
 MEILI_MASTER_KEY=op://lil-homie/karakeep/MEILI_MASTER_KEY
-OPENAI_BASE_URL=op://lil-homie/karakeep/OPENAI_BASE_URL
 OPENAI_API_KEY=op://lil-homie/karakeep/OPENAI_API_KEY
 OPENAI_REASONING_EFFORT=op://lil-homie/karakeep/OPENAI_REASONING_EFFORT
 INFERENCE_TEXT_MODEL=op://lil-homie/karakeep/INFERENCE_TEXT_MODEL

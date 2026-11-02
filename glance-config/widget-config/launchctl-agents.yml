@@ -1,6 +1,7 @@
 - type: custom-api
-  title: Launchctl
-  url: http://host.docker.internal:8765/status
+  title: lil-homie agents
+  # launchctl-agent-monitor.py on lil-homie, published on the tailnet by Tailscale Serve
+  url: https://${LIL_HOMIE_HOST}:8765/status
   cache: 30s
   template: |
     <ul class="list list-gap-10">

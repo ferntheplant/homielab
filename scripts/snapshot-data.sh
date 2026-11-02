@@ -2,16 +2,15 @@
 # Consistent snapshot of stateful data for Backrest.
 #
 # Copying live SQLite/LevelDB files while an app writes to them can produce a backup that
-# will not restore. This script stops the containers that own those files, APFS-clones
-# their data folders into $DATA_PATH/_snapshot (copy-on-write, so it takes seconds and
-# almost no disk space), and starts the containers again.
+# will not restore. This script stops the containers that own those files, copies
+# their data folders into $DATA_PATH/_snapshot (about 1.3 GB, a few seconds on the SSD),
+# and starts the containers again.
 #
 # Backrest backs up /userdata/_snapshot, not the live folders.
-# Runs nightly from launchd/dev.fjorn.lil-homie-snapshot.plist and before `manage.sh update`.
+# Runs nightly from systemd/homie-snapshot.timer and before `manage.sh update`.
 
 set -euo pipefail
 
-export PATH="$HOME/.orbstack/bin:/opt/nanobrew/prefix/bin:$PATH"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 set -a
 source "${REPO_DIR}/.env.shared"
@@ -52,7 +51,7 @@ rm -rf "${TMP_DIR}"
 mkdir -p "${TMP_DIR}"
 for f in "${FOLDERS[@]}"; do
     if [[ -e "${DATA_PATH}/${f}" ]]; then
-        cp -cR "${DATA_PATH}/${f}" "${TMP_DIR}/"
+        cp -a --reflink=auto "${DATA_PATH}/${f}" "${TMP_DIR}/"
     fi
 done
 

@@ -14,7 +14,7 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+HOST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LABEL="dev.fjorn.tailscaled"
 OLD_LABEL="homebrew.mxcl.tailscale"
 SOURCE="/opt/nanobrew/prefix/bin/tailscaled"
@@ -31,7 +31,7 @@ echo "$(date '+%Y-%m-%d %H:%M:%S') installing $("${SOURCE}" --version | head -1)
 
 install -d -o root -g wheel -m 755 "${BIN_DIR}"
 install -o root -g wheel -m 755 "${SOURCE}" "${BIN_DIR}/tailscaled"
-install -o root -g wheel -m 644 "${REPO_DIR}/launchd/${LABEL}.plist" "${PLIST}"
+install -o root -g wheel -m 644 "${HOST_DIR}/launchd/${LABEL}.plist" "${PLIST}"
 
 launchctl bootout "system/${OLD_LABEL}" 2>/dev/null || true
 # Keep the Homebrew plist for a rollback until Homebrew is gone:

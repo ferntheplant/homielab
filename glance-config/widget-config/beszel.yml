@@ -3,7 +3,7 @@
   url: http://${BESZEL_URL}/api/collections/systems/records
   method: GET
   options:
-    redirect-url: "https://lil-homie.tail8cc0d3.ts.net/beszel"
+    redirect-url: "https://${TS_HOST}/beszel"
     in-new-tab: true
     hide-kernel: true
     hide-cpu-info: true

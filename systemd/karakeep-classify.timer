@@ -1,0 +1,10 @@
+[Unit]
+Description=Classify Karakeep bookmarks every 5 minutes
+
+[Timer]
+OnBootSec=2min
+# Counted from the end of the last run, so runs never overlap
+OnUnitInactiveSec=5min
+
+[Install]
+WantedBy=timers.target

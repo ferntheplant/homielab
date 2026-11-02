@@ -22,24 +22,19 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Secrets live in the 1Password "lil-homie" vault. Each stack's .env.tpl maps env vars to op:// refs,
-# and `op run` resolves them for compose. The read-only service account token is in the login keychain.
-OP_KEYCHAIN_SERVICE="lil-homie-op"
+# and `op run` resolves them for compose. The read-only service account token is in a 0600 file.
+OP_TOKEN_FILE="${HOME}/.config/lil-homie/op-token"
 
 load_op_token() {
     if [[ -n "${OP_SERVICE_ACCOUNT_TOKEN:-}" ]]; then
         return 0
     fi
-    # Over SSH the login keychain is locked; launchd jobs in the GUI session read it without a prompt
-    if ! OP_SERVICE_ACCOUNT_TOKEN=$(security find-generic-password -s "${OP_KEYCHAIN_SERVICE}" -w 2>/dev/null); then
-        echo -e "${YELLOW}Unlock the login keychain to read the 1Password token:${NC}" >&2
-        security unlock-keychain "${HOME}/Library/Keychains/login.keychain-db" >&2
-        OP_SERVICE_ACCOUNT_TOKEN=$(security find-generic-password -s "${OP_KEYCHAIN_SERVICE}" -w)
+    if [[ ! -r "${OP_TOKEN_FILE}" ]]; then
+        echo -e "${RED}No 1Password service account token in ${OP_TOKEN_FILE}${NC}" >&2
+        exit 1
     fi
+    OP_SERVICE_ACCOUNT_TOKEN=$(<"${OP_TOKEN_FILE}")
     export OP_SERVICE_ACCOUNT_TOKEN
-    # Service account only: skip the desktop-app integration and cache daemon. In the GUI session
-    # (launchd) they trigger macOS privacy prompts, and op blocks until someone answers them.
-    export OP_BIOMETRIC_UNLOCK_ENABLED=false
-    export OP_CACHE=false
 }
 
 compose_cmd() {
@@ -57,7 +52,7 @@ compose_cmd() {
 run_with_timeout() {
     local seconds=$1
     shift
-    perl -e 'alarm shift; exec @ARGV' "$seconds" "$@" </dev/null >/dev/null 2>&1 || true
+    timeout "$seconds" "$@" </dev/null >/dev/null 2>&1 || true
 }
 
 ensure_tailscale_serve() {

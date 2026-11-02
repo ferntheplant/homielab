@@ -40,14 +40,30 @@ services:
     container_name: beszel
     restart: unless-stopped
     environment:
-      - APP_URL=https://lil-homie.tail8cc0d3.ts.net/beszel
+      - APP_URL=https://${TS_HOST}/beszel
     ports:
       - 127.0.0.1:8090:8090
     volumes:
       - ${DATA_PATH}/beszel_data:/beszel_data
-      - ${DATA_PATH}/beszel_socket:/beszel_socket
     networks:
       - caddy_network
+
+  # Host agent for this machine. It connects to the hub over WebSocket (HUB_URL + TOKEN).
+  # KEY (the hub public key) and TOKEN (from "Add system" in the hub) live in the env file.
+  beszel-agent:
+    image: henrygd/beszel-agent:latest
+    container_name: beszel-agent
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - path: ${HOME}/.config/beszel/beszel-agent.env
+        required: false
+    environment:
+      - HUB_URL=http://127.0.0.1:8090
+      - LISTEN=127.0.0.1:45876
+    volumes:
+      # Container stats. The agent only reads, but the Docker API cannot enforce that.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
 
   glance:
     container_name: glance
@@ -64,6 +80,8 @@ services:
       - BESZEL_API_TOKEN=${BESZEL_API_TOKEN}
       - CALENDAR_URL=${CALENDAR_URL}
       - KARAKEEP_API_KEY=${KARAKEEP_API_KEY}
+      - TS_HOST=${TS_HOST}
+      - LIL_HOMIE_HOST=${LIL_HOMIE_HOST}
       - LAT=${LAT}
       - LON=${LON}
       - WEATHER_LOCATION=${WEATHER_LOCATION}
@@ -101,8 +119,9 @@ services:
     networks:
       - caddy_network
     ports:
-      - 22000:22000/tcp
-      - 22000:22000/udp
+      # Sync port on the tailnet IP only. ip_nonlocal_bind lets Docker bind it before tailscaled is up.
+      - ${TS_IP}:22000:22000/tcp
+      - ${TS_IP}:22000:22000/udp
       - 127.0.0.1:8384:8384
 
   backrest:

@@ -1,4 +1,4 @@
-# Nanobrew: lil-homie packages, installed after ~/dotfiles/.Nanobrewfile
+# Nanobrew: lil-homie (Mac) packages, installed after ~/dotfiles/.Nanobrewfile
 # Xcode comes from the App Store and is not listed here.
 brew "henrygd/beszel/beszel-agent"
 brew "pre-commit"

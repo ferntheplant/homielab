@@ -1,0 +1,8 @@
+[Unit]
+Description=Weekly image update, Sunday 04:30 (after the snapshot and backup)
+
+[Timer]
+OnCalendar=Sun *-*-* 04:30:00
+
+[Install]
+WantedBy=timers.target

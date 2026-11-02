@@ -55,23 +55,23 @@ pages:
                 title: Services
                 sites:
                   - title: karakeep
-                    url: https://lil-homie.tail8cc0d3.ts.net:3003
+                    url: https://${TS_HOST}:3003
                     check-url: http://karakeep-web:3000/api/health
                     icon: sh:karakeep
                   - title: backrest
-                    url: https://lil-homie.tail8cc0d3.ts.net/backrest/
+                    url: https://${TS_HOST}/backrest/
                     check-url: http://backrest:9898
                     icon: sh:backrest
                   - title: syncthing
-                    url: https://lil-homie.tail8cc0d3.ts.net/syncthing/
+                    url: https://${TS_HOST}/syncthing/
                     check-url: http://syncthing:8384/rest/noauth/health
                     icon: sh:syncthing
                   - title: beszel
-                    url: https://lil-homie.tail8cc0d3.ts.net/beszel
+                    url: https://${TS_HOST}/beszel
                     check-url: http://beszel:8090/api/health
                     icon: sh:beszel
                   - title: dozzle
-                    url: https://lil-homie.tail8cc0d3.ts.net/logs
+                    url: https://${TS_HOST}/logs
                     check-url: http://dozzle:8080/logs/healthcheck
                     icon: sh:dozzle
               - $include: widget-config/docker.yml

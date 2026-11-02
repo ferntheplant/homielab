@@ -6,12 +6,13 @@ invents 4-5 tags per bookmark. One call with a fixed set of answers is far more 
 
 Each run lists all bookmarks, skips the ones that already have a KINDS tag or are not crawled
 yet, classifies the rest, and attaches the tag (attachedBy "ai") through the Karakeep API.
-Runs every 5 minutes from launchd/dev.fjorn.karakeep-classify.plist.
+Runs every 5 minutes from systemd/karakeep-classify.timer.
 
     scripts/karakeep-classify.py [--dry-run] [--limit N]
 
 API key: $KARAKEEP_API_KEY, else op://lil-homie/homie/KARAKEEP_API_KEY through the read-only
-1Password service account in the login keychain (same as stacks/manage.sh).
+1Password service account token in ~/.config/lil-homie/op-token (same as stacks/manage.sh).
+Ollama runs on lil-homie (the Mac), published on the tailnet by Tailscale Serve.
 """
 import argparse
 import http.client
@@ -24,9 +25,9 @@ import urllib.error
 import urllib.request
 
 KARAKEEP = os.environ.get("KARAKEEP_URL", "http://127.0.0.1:3000")
-OLLAMA = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
+OLLAMA = os.environ.get("OLLAMA_URL", "http://lil-homie:11434")
 MODEL = os.environ.get("CLASSIFY_MODEL", "qwen3.5:4b-16k")
-OP = "/opt/nanobrew/prefix/bin/op"
+OP_TOKEN_FILE = os.path.expanduser("~/.config/lil-homie/op-token")
 
 KINDS = ("tool", "reading")
 PROMPT = """Classify a saved web bookmark as exactly one kind.
@@ -45,13 +46,11 @@ def log(msg):
 def api_key():
     if os.environ.get("KARAKEEP_API_KEY"):
         return os.environ["KARAKEEP_API_KEY"]
-    token = subprocess.run(
-        ["security", "find-generic-password", "-s", "lil-homie-op", "-w"],
-        check=True, capture_output=True, text=True,
-    ).stdout.strip()
-    env = dict(os.environ, OP_SERVICE_ACCOUNT_TOKEN=token, OP_BIOMETRIC_UNLOCK_ENABLED="false", OP_CACHE="false")
+    with open(OP_TOKEN_FILE) as f:
+        token = f.read().strip()
+    env = dict(os.environ, OP_SERVICE_ACCOUNT_TOKEN=token)
     return subprocess.run(
-        [OP, "read", "op://lil-homie/homie/KARAKEEP_API_KEY"],
+        ["op", "read", "op://lil-homie/homie/KARAKEEP_API_KEY"],
         check=True, capture_output=True, text=True, env=env,
     ).stdout.strip()
 

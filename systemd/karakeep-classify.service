@@ -1,0 +1,7 @@
+[Unit]
+Description=Tag new Karakeep bookmarks as tool or reading (Ollama on lil-homie)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/lil-homie/scripts/karakeep-classify.py
+TimeoutStartSec=1h

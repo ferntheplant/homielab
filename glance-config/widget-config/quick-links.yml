@@ -4,18 +4,18 @@
     - title: tailnet-only
       links:
       - title: karakeep
-        url: https://lil-homie.tail8cc0d3.ts.net:3003
+        url: https://${TS_HOST}:3003
         icon: sh:karakeep
 
     - title: management
       links:
       - title: backrest
-        url: https://lil-homie.tail8cc0d3.ts.net/backrest
+        url: https://${TS_HOST}/backrest
         icon: sh:backrest
       - title: logs
-        url: https://lil-homie.tail8cc0d3.ts.net/logs
+        url: https://${TS_HOST}/logs
         icon: sh:dozzle
       - title: metrics
-        url: https://lil-homie.tail8cc0d3.ts.net/beszel
+        url: https://${TS_HOST}/beszel
         icon: sh:beszel
 

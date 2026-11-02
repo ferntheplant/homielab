@@ -15,12 +15,12 @@ services:
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
       BROWSER_WEB_URL: http://karakeep-chrome:9222
       DISABLE_SIGNUPS: ${DISABLE_SIGNUPS}
-      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_URL: https://${TS_HOST}:3003
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       CRAWLER_NUM_WORKERS: ${CRAWLER_NUM_WORKERS}
-      # Ollama via its OpenAI-compatible /v1 API: only that client can send reasoning_effort=none,
+      # Ollama on lil-homie (Tailscale Serve) via its OpenAI-compatible /v1 API: only that client can send reasoning_effort=none,
       # which turns off qwen3.5 thinking (10x slower, and it can use up the output token budget)
-      OPENAI_BASE_URL: ${OPENAI_BASE_URL}
+      OPENAI_BASE_URL: ${OLLAMA_URL}/v1
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_REASONING_EFFORT: ${OPENAI_REASONING_EFFORT}
       INFERENCE_TEXT_MODEL: ${INFERENCE_TEXT_MODEL}

@@ -5,7 +5,7 @@
   <key>Label</key><string>dev.fjorn.launchctl-agent-monitor</string>
   <key>ProgramArguments</key><array>
     <string>/usr/bin/python3</string>
-    <string>/Users/fjorn/lil-homie/launchctl-agent-monitor.py</string>
+    <string>/Users/fjorn/lil-homie/hosts/lil-homie/launchctl-agent-monitor.py</string>
   </array>
   <key>StandardOutPath</key><string>/Users/fjorn/Library/Logs/launchctl-agent-monitor/stdout.log</string>
   <key>StandardErrorPath</key><string>/Users/fjorn/Library/Logs/launchctl-agent-monitor/stderr.log</string>

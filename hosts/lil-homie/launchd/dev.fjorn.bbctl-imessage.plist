@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>dev.fjorn.bbctl-imessage</string>
+  <key>ProgramArguments</key><array>
+    <string>/Users/fjorn/.local/bin/bbctl</string>
+    <string>--config</string>
+    <string>/Users/fjorn/Library/Application Support/bbctl/config.json</string>
+    <string>run</string>
+    <string>--param</string>
+    <string>imessage_platform=mac</string>
+    <string>sh-imessage</string>
+  </array>
+  <key>StandardOutPath</key><string>/Users/fjorn/Library/Logs/bbctl-imessage/stdout.log</string>
+  <key>StandardErrorPath</key><string>/Users/fjorn/Library/Logs/bbctl-imessage/stderr.log</string>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict></plist>
