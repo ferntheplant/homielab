@@ -4,3 +4,4 @@ foo/
 .DS_store
 **/*.env
 media/
+__pycache__/
