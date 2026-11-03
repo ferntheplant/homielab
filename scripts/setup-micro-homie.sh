@@ -27,12 +27,17 @@ Components: stable
 Signed-By: /etc/apt/keyrings/docker.asc
 SRC
 
-# Rotate container logs (the default json-file driver never deletes them)
+# Rotate container logs (the default json-file driver never deletes them).
+# Fixed DNS: a container copies the host's DNS servers when it starts. At boot, Docker can
+# start before tailscaled writes /etc/resolv.conf, and then the containers have no DNS.
+# 100.100.100.100 is Tailscale's resolver (MagicDNS), the same server the host uses.
 mkdir -p /etc/docker
 cat > /etc/docker/daemon.json <<JSON
 {
   "log-driver": "json-file",
-  "log-opts": { "max-size": "10m", "max-file": "3" }
+  "log-opts": { "max-size": "10m", "max-file": "3" },
+  "dns": ["100.100.100.100"],
+  "dns-search": ["tail8cc0d3.ts.net"]
 }
 JSON
 

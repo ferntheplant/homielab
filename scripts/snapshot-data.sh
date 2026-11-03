@@ -7,6 +7,10 @@
 # and starts the containers again.
 #
 # Backrest backs up /userdata/_snapshot, not the live folders.
+#
+# The copy runs in a short-lived root container. The beeper bridges run as root and write
+# root-only files (config.yaml holds the logins), so fjorn cannot read them. binaries/ is
+# left out: each bridge downloads it again on start.
 # Runs nightly from systemd/homie-snapshot.timer and before `manage.sh update`.
 
 set -euo pipefail
@@ -22,8 +26,13 @@ CONTAINERS=(karakeep-web beszel syncthing beeper-discord beeper-facebook beeper-
 # the search index. backrest is left out: its config holds the repo password.
 FOLDERS=(karakeep beszel_data syncthing beeper-discord beeper-facebook beeper-signal langfuse-archive)
 
-SNAPSHOT_DIR="${DATA_PATH}/_snapshot"
-TMP_DIR="${DATA_PATH}/_snapshot.tmp"
+# Small image that is already on the box; it only needs sh, cp, rm and mv
+COPY_IMAGE=alpine:3.20
+
+# Run a shell script as root with $DATA_PATH mounted at /data
+as_root() {
+    docker run --rm --network none -v "${DATA_PATH}:/data" "${COPY_IMAGE}" sh -euc "$@"
+}
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $*"; }
 
@@ -47,18 +56,21 @@ if [[ ${#stopped[@]} -gt 0 ]]; then
     docker stop -t 30 "${stopped[@]}" >/dev/null
 fi
 
-rm -rf "${TMP_DIR}"
-mkdir -p "${TMP_DIR}"
-for f in "${FOLDERS[@]}"; do
-    if [[ -e "${DATA_PATH}/${f}" ]]; then
-        cp -a --reflink=auto "${DATA_PATH}/${f}" "${TMP_DIR}/"
-    fi
-done
+as_root '
+    rm -rf /data/_snapshot.tmp
+    mkdir -p /data/_snapshot.tmp
+    for f in "$@"; do
+        if [ -e "/data/$f" ]; then cp -a "/data/$f" /data/_snapshot.tmp/; fi
+    done
+    rm -rf /data/_snapshot.tmp/beeper-*/binaries
+' sh "${FOLDERS[@]}"
 
 start_stopped
 stopped=()
 
-rm -rf "${SNAPSHOT_DIR}"
-mv "${TMP_DIR}" "${SNAPSHOT_DIR}"
-date '+%Y-%m-%dT%H:%M:%S%z' > "${SNAPSHOT_DIR}/.snapshot-time"
-log "snapshot written to ${SNAPSHOT_DIR}"
+as_root '
+    rm -rf /data/_snapshot
+    mv /data/_snapshot.tmp /data/_snapshot
+    echo "$1" > /data/_snapshot/.snapshot-time
+' sh "$(date '+%Y-%m-%dT%H:%M:%S%z')"
+log "snapshot written to ${DATA_PATH}/_snapshot"
