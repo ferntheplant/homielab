@@ -116,6 +116,9 @@ services:
       - PGID=1000
     volumes:
       - ${DATA_PATH}/syncthing:/var/syncthing
+      # 8 TB storage drive (README, Storage drive). Bulk folders go in /storage/sync.
+      # rslave: if the drive mounts after the container starts, the container still sees it.
+      - /srv/storage:/storage:rslave
     networks:
       - caddy_network
     ports:
@@ -133,6 +136,8 @@ services:
       - ${DATA_PATH}/backrest/config:/config
       - ${DATA_PATH}/backrest/cache:/cache
       - ${DATA_PATH}:/userdata  # backup the data folder
+      # 8 TB storage drive: the local restic repo is /storage/backup (README, Storage drive)
+      - /srv/storage:/storage:rslave
     environment:
       - BACKREST_DATA=/data
       - BACKREST_CONFIG=/config/config.json

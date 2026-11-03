@@ -1,0 +1,10 @@
+[Unit]
+Description=Monthly scrub of the btrfs storage drive
+
+[Timer]
+# 1st of the month, after the 03:30 snapshot and the 04:00 Backrest backup
+OnCalendar=*-*-01 05:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

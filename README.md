@@ -20,6 +20,7 @@ stacks/<name>/                 one docker compose project per stack (+ .env.tpl:
 stacks/manage.sh               start/stop/update everything
 systemd/                       user timers for micro-homie (snapshot, update, classifier)
 hosts/lil-homie/               launchd agents and scripts for the Mac
+hosts/micro-homie/storage/     btrbk config and scrub timer for the 8 TB drive (see Storage drive)
 data/                          all service data ($DATA_PATH, gitignored)
 ```
 
@@ -50,6 +51,61 @@ cat > ~/.config/lil-homie/op-token                # paste the service account to
 `setup-micro-homie.sh` also sets `net.ipv4.ip_nonlocal_bind=1`. Docker binds Syncthing to the tailnet IP, and at boot
 Docker can start before `tailscaled` has that IP. The disk is not encrypted, so the box boots without a person at the
 keyboard. In the BIOS, set it to power on after a power loss.
+
+## Storage drive
+
+micro-homie has an 8 TB USB hard drive (Toshiba HDWF180, serial 697SK0FZFB6G) for bulk data. The service data stays
+on the SSD. The drive holds:
+
+| Subvolume | Use | Snapshots |
+| --- | --- | --- |
+| `/srv/storage/archive` | file and media archive (`old-drive-archive`, the folders kept from the drive's old data) | daily |
+| `/srv/storage/sync` | large Syncthing folders | daily |
+| `/srv/storage/backup` | the local restic repo for Backrest | none, restic keeps its own history |
+| `/srv/storage/.snapshots` | btrbk snapshots, read-only | - |
+
+The filesystem is btrfs on one GPT partition, with the label `storage`. btrfs checks a checksum on each read, so it
+finds corrupt data. On one disk it keeps two copies of the metadata but one copy of the data, so it cannot repair
+bad data. The repair source is the other copy: R2 for backups, or the other Syncthing devices.
+
+- **Mount:** fstab mounts the drive by UUID at `/srv/storage` with `noatime,compress=zstd:1,nofail,x-systemd.device-timeout=30s`.
+  The box boots without the drive and waits for it for a maximum of 30 s.
+- **Mount point guard:** the empty `/srv/storage` folder on the SSD has the immutable flag (`chattr +i`). When the
+  drive is absent, nothing can write there, so a container gets an error instead of filling the SSD.
+- **Containers:** Syncthing and Backrest mount `/srv/storage` at `/storage` with `rslave`, so a late mount still
+  shows up in a running container. Docker does not wait for the drive.
+- **Snapshots:** `btrbk.timer` (Debian's, daily) uses `hosts/micro-homie/storage/btrbk.conf`. It keeps 14 daily,
+  8 weekly, and 6 monthly snapshots. To restore a file, copy it out of `/srv/storage/.snapshots/<subvolume>.<timestamp>/`.
+- **Scrub:** `btrfs-scrub-storage.timer` reads every block on the 1st of each month at 05:00 and checks it.
+- **Spin-down:** not set. The drive uses its own defaults.
+
+`sudo ~/lil-homie/scripts/setup-storage.sh` does the host setup: packages, mount point, fstab, mount, subvolumes,
+btrbk, and the scrub timer. It does not wipe or format the drive. On a new drive, do those steps by hand first.
+Always use the by-id path, because `/dev/sdX` letters can change:
+
+```bash
+D=/dev/disk/by-id/ata-TOSHIBA_HDWF180_697SK0FZFB6G
+lsblk -o NAME,SIZE,MODEL,SERIAL "$D"     # make sure that this is the right drive
+sudo wipefs --all "$D"-part*             # old filesystem signatures, if there are partitions
+sudo wipefs --all "$D"                   # old partition table
+printf 'label: gpt\nname=storage, type=linux\n' | sudo sfdisk --wipe always "$D"
+sudo udevadm settle
+sudo mkfs.btrfs -L storage "$D-part1"
+```
+
+Check the drive:
+
+```bash
+sudo btrfs scrub status /srv/storage
+sudo btrfs device stats /srv/storage      # error counters, all 0 is good
+sudo smartctl -H -A /dev/disk/by-id/ata-TOSHIBA_HDWF180_697SK0FZFB6G
+sudo btrbk list snapshots
+```
+
+The enclosure uses an ASMedia ASM235CM USB bridge (`174c:55aa`). `lsusb -t` must show `Driver=uas, 5000M`. If the
+drive disconnects under load and `sudo dmesg` shows `uas_eh` or `reset` lines, add the kernel option
+`usb-storage.quirks=174c:55aa:u` to turn off UAS for this bridge. After a disconnect, btrfs goes read-only: fix the
+cause, then `sudo umount /srv/storage && sudo mount /srv/storage`.
 
 ## Stacks + Manage Script
 

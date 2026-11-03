@@ -1,0 +1,11 @@
+[Unit]
+Description=Scrub the btrfs storage drive (read every block and check its checksum)
+Documentation=man:btrfs-scrub(8)
+RequiresMountsFor=/srv/storage
+ConditionPathIsMountPoint=/srv/storage
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/btrfs scrub start -B -d /srv/storage
+Nice=19
+IOSchedulingClass=idle
