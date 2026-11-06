@@ -8,7 +8,8 @@
 #   3. makes the GitHub repo (public) if it does not exist
 #   4. adds a Forgejo push mirror over SSH (sync on each push and every 8 h)
 #   5. adds the mirror's public key to the GitHub repo as a deploy key with write access
-#   6. adds two GitHub rulesets (branches, tags): only deploy keys may create, update, or delete refs
+#   6. lets deploy keys bypass any existing GitHub ruleset, then adds two rulesets (branches, tags): only
+#      deploy keys may create, update, or delete refs
 #   7. turns off GitHub issues, wiki, and projects
 #   8. runs the first sync and compares the refs
 #
@@ -99,6 +100,25 @@ api -d "{\"remote_address\":\"git@github.com:$OWNER/$repo.git\",\"use_ssh\":true
 log "GitHub deploy key (write)"
 gh repo deploy-key add "$pubkey_file" --allow-write --title "Forgejo push mirror (micro-homie)" -R "$OWNER/$repo"
 rm -f "$pubkey_file"
+
+log "GitHub rulesets: existing rulesets must let deploy keys through"
+# An existing ruleset (for example a `main` ruleset that requires a PR) blocks the mirror's push
+# unless deploy keys can bypass it.
+for id in $(gh api "repos/$OWNER/$repo/rulesets" --jq '.[] | select(.name | startswith("read-only mirror") | not) | .id'); do
+    gh api "repos/$OWNER/$repo/rulesets/$id" | python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+actors = d.get("bypass_actors") or []
+if any(a["actor_type"] == "DeployKey" for a in actors):
+    sys.exit(0)
+body = {k: d[k] for k in ("name", "target", "enforcement", "conditions", "rules")}
+body["bypass_actors"] = actors + [{"actor_id": None, "actor_type": "DeployKey", "bypass_mode": "always"}]
+print(json.dumps(body))' > /tmp/ruleset-$$.json
+    if [[ -s /tmp/ruleset-$$.json ]]; then
+        gh api -X PUT "repos/$OWNER/$repo/rulesets/$id" --input /tmp/ruleset-$$.json --jq '"ruleset \(.id): \(.name): deploy keys may bypass"'
+    fi
+    rm -f /tmp/ruleset-$$.json
+done
 
 log "GitHub rulesets: only deploy keys may write"
 for target in branch tag; do
