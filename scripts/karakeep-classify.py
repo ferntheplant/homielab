@@ -10,7 +10,7 @@ Runs every 5 minutes from systemd/karakeep-classify.timer.
 
     scripts/karakeep-classify.py [--dry-run] [--limit N]
 
-API key: $KARAKEEP_API_KEY, else op://lil-homie/homie/KARAKEEP_API_KEY through the read-only
+API key: $KARAKEEP_API_KEY, else op://homielab/homie/KARAKEEP_API_KEY through the read-only
 1Password service account token in ~/.config/homielab/op-token (same as stacks/manage.sh).
 llama-server runs on lil-homie (the Mac), published on the tailnet by Tailscale Serve.
 """
@@ -50,7 +50,7 @@ def api_key():
         token = f.read().strip()
     env = dict(os.environ, OP_SERVICE_ACCOUNT_TOKEN=token)
     return subprocess.run(
-        ["op", "read", "op://lil-homie/homie/KARAKEEP_API_KEY"],
+        ["op", "read", "op://homielab/homie/KARAKEEP_API_KEY"],
         check=True, capture_output=True, text=True, env=env,
     ).stdout.strip()
 

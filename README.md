@@ -29,7 +29,7 @@ data/                          all service data ($DATA_PATH, gitignored)
 
 - everything runs on Docker Engine + compose on micro-homie
 - all data for all services lives in `$DATA_PATH` (`data/`)
-- secrets live in the 1Password `lil-homie` vault (see [Secrets](#secrets)). `.env.shared` holds the settings that
+- secrets live in the 1Password `homielab` vault (see [Secrets](#secrets)). `.env.shared` holds the settings that
   are not secret: `DATA_PATH`, the tailnet names, and the llama-server URLs
 - stacks are independent compose projects, all joined by the shared `caddy_network`
 - every published port binds to `127.0.0.1`; the only way in is Tailscale Serve (tailnet only). The one exception is
@@ -137,8 +137,8 @@ uses the host network, so it cannot reach the proxy's internal network.
 
 ## Secrets
 
-Secrets live in the 1Password `lil-homie` vault, one Secure Note per stack (`beeper`, `homie`, `karakeep`, `forgejo`), one
-field per variable. Each `stacks/<stack>/.env.tpl` maps variable names to `op://lil-homie/<stack>/<VAR>` refs and is
+Secrets live in the 1Password `homielab` vault, one Secure Note per stack (`beeper`, `homie`, `karakeep`, `forgejo`), one
+field per variable. Each `stacks/<stack>/.env.tpl` maps variable names to `op://homielab/<stack>/<VAR>` refs and is
 safe to commit. `manage.sh` wraps every compose call in `op run --env-file .env.tpl`, and each service in the compose
 files lists only the variables it needs (`VAR: ${VAR}`).
 
@@ -148,8 +148,8 @@ files lists only the variables it needs (`VAR: ${VAR}`).
 To add or change a secret:
 
 1. Edit the stack's item in 1Password (add a field named after the variable). The service account is read-only, so
-   use the 1Password app or your own `op` account, e.g. `op item edit karakeep --vault lil-homie 'VAR[text]=value'`.
-2. Add `VAR=op://lil-homie/<stack>/VAR` to `stacks/<stack>/.env.tpl`.
+   use the 1Password app or your own `op` account, e.g. `op item edit karakeep --vault homielab 'VAR[text]=value'`.
+2. Add `VAR=op://homielab/<stack>/VAR` to `stacks/<stack>/.env.tpl`.
 3. Add `VAR: ${VAR}` to the service that needs it.
 4. Run `./stacks/manage.sh start <stack>`.
 
@@ -339,7 +339,7 @@ Reverse proxy authentication does not cover the API. API calls need an access to
 1. Make the 1Password item. The service account is read-only, so use your own `op` account:
 
    ```bash
-   op item create --vault lil-homie --category 'Secure Note' --title forgejo \
+   op item create --vault homielab --category 'Secure Note' --title forgejo \
      "SECRET_KEY[password]=$(openssl rand -hex 32)" \
      "INTERNAL_TOKEN[password]=$(openssl rand -hex 48)"
    ```

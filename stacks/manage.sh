@@ -26,7 +26,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Secrets live in the 1Password "lil-homie" vault. Each stack's .env.tpl maps env vars to op:// refs,
+# Secrets live in the 1Password "homielab" vault. Each stack's .env.tpl maps env vars to op:// refs,
 # and `op run` resolves them for compose. The read-only service account token is in a 0600 file.
 OP_TOKEN_FILE="${HOME}/.config/homielab/op-token"
 
