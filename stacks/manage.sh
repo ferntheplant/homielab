@@ -6,13 +6,18 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "${SCRIPT_DIR}")"
-STACKS=("caddy" "beeper" "homie" "karakeep")
+STACKS=("caddy" "beeper" "homie" "karakeep" "forgejo")
 SHARED_ENV_FILE="${REPO_DIR}/.env.shared"
 
 # Tailscale Serve: tailnet HTTPS port -> local target. Every target binds to 127.0.0.1 only.
 TAILSCALE_SERVE=(
     "443=http://127.0.0.1:8080"  # caddy (dashboard + subpaths)
     "3003=http://127.0.0.1:3000" # karakeep (needs its own origin for the mobile app/extension)
+    "3001=http://127.0.0.1:3001" # forgejo web, through its sign-in proxy
+)
+# Tailscale Serve TCP forwards: tailnet port -> local target
+TAILSCALE_SERVE_TCP=(
+    "2222=tcp://127.0.0.1:2222" # forgejo git over SSH
 )
 
 # Colors for output
@@ -63,6 +68,9 @@ ensure_tailscale_serve() {
     echo -e "${YELLOW}→ tailscale serve${NC}"
     for entry in "${TAILSCALE_SERVE[@]}"; do
         run_with_timeout 5 tailscale serve --bg --https="${entry%%=*}" "${entry#*=}"
+    done
+    for entry in "${TAILSCALE_SERVE_TCP[@]}"; do
+        run_with_timeout 5 tailscale serve --bg --tcp="${entry%%=*}" "${entry#*=}"
     done
     tailscale serve status
 }

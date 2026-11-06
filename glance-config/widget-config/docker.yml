@@ -30,6 +30,10 @@
       icon: sh:meilisearch
     karakeep-chrome:
       icon: sh:google-chrome
+    forgejo:
+      icon: sh:forgejo
+    forgejo-proxy:
+      icon: sh:caddy
     restic-glance-extension:
       name: glance-restic
       icon: https://cdn.jsdelivr.net/gh/selfhst/icons/webp/restic.webp

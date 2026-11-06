@@ -127,13 +127,14 @@ Stacks:
   helpers, and a read-only Docker socket proxy (dozzle and glance read the Docker API through it)
 - `karakeep`: bookmarker + meilisearch + headless chrome
 - `beeper`: bridge-manager containers for Discord, Signal, Facebook
+- `forgejo`: the git host + its sign-in proxy, on its own network (see [Forgejo](#forgejo))
 
 Two containers mount the Docker socket directly: `socket-proxy`, and `beszel-agent` for container stats. The agent
 uses the host network, so it cannot reach the proxy's internal network.
 
 ## Secrets
 
-Secrets live in the 1Password `lil-homie` vault, one Secure Note per stack (`beeper`, `homie`, `karakeep`), one
+Secrets live in the 1Password `lil-homie` vault, one Secure Note per stack (`beeper`, `homie`, `karakeep`, `forgejo`), one
 field per variable. Each `stacks/<stack>/.env.tpl` maps variable names to `op://lil-homie/<stack>/<VAR>` refs and is
 safe to commit. `manage.sh` wraps every compose call in `op run --env-file .env.tpl`, and each service in the compose
 files lists only the variables it needs (`VAR: ${VAR}`).
@@ -177,7 +178,8 @@ containers, and prunes old images. The unit stops the job after 2 hours, so a st
 the next week.
 
 Images with on-disk formats that need a manual migration stay pinned (`getmeili/meilisearch:v1.13.3`,
-`zenika/alpine-chrome:124`, the Chrome version Karakeep documents). Bump those by hand.
+`zenika/alpine-chrome:124`, the Chrome version Karakeep documents). Bump those by hand. Forgejo is pinned to a
+major version (`17-rootless`), so the update gets its patch releases only. See [Forgejo](#forgejo).
 
 Debian packages (Docker, Tailscale, 1Password CLI) come from apt. `unattended-upgrades` installs Debian security
 updates only; run `sudo apt update && sudo apt upgrade` for the rest.
@@ -199,6 +201,8 @@ All access is via Tailscale. The server is `micro-homie.tail8cc0d3.ts.net`. Serv
 
 - `https://micro-homie.tail8cc0d3.ts.net/` → `127.0.0.1:8080` (Caddy: dashboard, `/logs`, `/beszel`, `/syncthing`, `/backrest`)
 - `https://micro-homie.tail8cc0d3.ts.net:3003/` → `127.0.0.1:3000` (Karakeep, needs its own origin for the app/extension)
+- `https://micro-homie.tail8cc0d3.ts.net:3001/` → `127.0.0.1:3001` (Forgejo web, through its sign-in proxy)
+- `micro-homie.tail8cc0d3.ts.net:2222` (TCP) → `127.0.0.1:2222` (Forgejo git over SSH)
 
 `./stacks/manage.sh serve` applies this (the mapping lives at the top of `manage.sh`). `setup-micro-homie.sh` makes
 `fjorn` the Tailscale operator, so `tailscale serve` works without sudo. If `tailscale serve status` shows
@@ -296,6 +300,88 @@ archive a bookmark when it is read). To fix a wrong kind, swap the tag by hand; 
 python3 scripts/karakeep-classify.py --dry-run --limit 10   # classify, print, write nothing
 journalctl --user -u karakeep-classify.service              # log
 ```
+
+## Forgejo
+
+[Forgejo](https://forgejo.org) is the git host. It is tailnet-only, like everything else:
+
+- web: `https://micro-homie.tail8cc0d3.ts.net:3001/`
+- git: `ssh://git@micro-homie.tail8cc0d3.ts.net:2222/ferntheplant/<repo>.git`
+
+Files are in `stacks/forgejo/`. Data is in `data/forgejo`: `custom/conf/app.ini`, the repos in `git/repositories`,
+and the SQLite database in `data/gitea.db`. The compose file sets the config through `FORGEJO__<section>__<KEY>`
+variables, which Forgejo writes into `app.ini` at each start. To change a setting, edit the compose file, not
+`app.ini`.
+
+### Sign-in through Tailscale
+
+There is no password to type. Tailscale Serve adds a `Tailscale-User-Login` header to each request from a tailnet
+user. The `forgejo-proxy` Caddy (`stacks/forgejo/Caddyfile`) removes any `X-WEBAUTH-*` header from the client. When
+the login is `TS_LOGIN`, it sets `X-WEBAUTH-USER` to `FORGEJO_USER` (both in `.env.shared`). Forgejo signs that user
+in (reverse proxy authentication). Another tailnet user gets the normal sign-in page, and registration is off.
+
+Forgejo accepts `X-WEBAUTH-USER` from any sender. `REVERSE_PROXY_TRUSTED_PROXIES` does not limit it (tested). The
+network is the guard:
+
+- Forgejo and its proxy are alone on `forgejo_network`, not on `caddy_network`. Docker blocks traffic between
+  bridge networks, so no other container can reach them (tested from `glance`).
+- The proxy port binds to `127.0.0.1`. A process on micro-homie itself can still send the header.
+- Tailscale gives no identity headers for tagged devices. From a tagged device, sign in with the password. Set one
+  first with the reset command below.
+
+Reverse proxy authentication does not cover the API. API calls need an access token (Settings → Applications).
+
+### First setup
+
+1. Make the 1Password item. The service account is read-only, so use your own `op` account:
+
+   ```bash
+   op item create --vault lil-homie --category 'Secure Note' --title forgejo \
+     "SECRET_KEY[password]=$(openssl rand -hex 32)" \
+     "INTERNAL_TOKEN[password]=$(openssl rand -hex 48)"
+   ```
+
+   `SECRET_KEY` encrypts the push-mirror SSH keys and 2FA secrets in the database. If it is lost, the mirrors stop.
+   Never change it on a running instance.
+2. Make the data folder first: `mkdir -p data/forgejo`. The image runs as uid 1000 (`fjorn`). If the folder does not
+   exist, Docker makes it as root, and Forgejo restarts in a loop.
+3. `./stacks/manage.sh start forgejo`
+4. Make the admin user. Its name must be `FORGEJO_USER`. Nobody needs the random password, because sign-in uses the
+   header:
+
+   ```bash
+   docker exec forgejo forgejo admin user create --admin --username ferntheplant --email me@fjorn.dev \
+     --random-password --must-change-password=false
+   ```
+
+5. Add your SSH public key in Settings → SSH / GPG keys. To show your signed commits as verified, click
+   **Verify** on the key. The signature namespace is the host name, not `git`:
+   `echo -n '<token>' | ssh-keygen -Y sign -n micro-homie.tail8cc0d3.ts.net -f ~/.ssh/id_ed25519`
+
+To reset the password, run `docker exec -it forgejo forgejo admin user change-password -u ferntheplant -p <new>`.
+
+### Settings
+
+- New repos are private in the web form (`DEFAULT_PRIVATE=private`). The API does not use this setting: a repo made
+  through the API is public unless the call sends `"private": true`.
+- The default merge style for pull requests is fast-forward only. Rebase and squash merges write new commits without
+  jj's `change-id` header, and jj then shows divergent changes.
+- Actions is off. A runner needs Docker access.
+- Not in the Glance services monitor: Glance cannot reach `forgejo_network`, and a container cannot reach Tailscale
+  Serve on this box. The Docker widget shows the container state.
+
+### jj
+
+jj works with Forgejo as a normal git remote. Tested on Forgejo 17.0.1 with jj 0.47.1: a commit with jj's `change-id`
+header and an SSH signature pushed over SSH, showed as verified, and kept the header after a `git clone`. jj does not
+support Git LFS, so LFS is off.
+
+### Updates
+
+The image is `codeberg.org/forgejo/forgejo:17-rootless`. The weekly update pulls patch releases of 17. Version 17 is
+supported until 2027-01-28. Before that date, read the release notes for the next major version, change the tag, and
+run `./stacks/manage.sh update forgejo`. The update takes a snapshot first. The next long-term support version is 19
+(April 2027).
 
 ## Beeper
 

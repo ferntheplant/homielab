@@ -1,0 +1,67 @@
+# Forgejo: the git host. Tailnet only, see README "Forgejo".
+#   web: Tailscale Serve :3001 -> 127.0.0.1:3001 -> forgejo-proxy (sign-in header) -> forgejo:3000
+#   ssh: Tailscale Serve :2222 (TCP) -> 127.0.0.1:2222 -> forgejo:2222 (built-in SSH server)
+# Not on caddy_network: no other container can reach Forgejo or send it a sign-in header.
+services:
+  forgejo:
+    container_name: forgejo
+    # Pinned to a major version: `manage.sh update` pulls patch releases only. 17 is supported
+    # until 2027-01-28. Read the release notes before a major bump (database migrations).
+    image: codeberg.org/forgejo/forgejo:17-rootless
+    restart: unless-stopped
+    volumes:
+      # app.ini is at custom/conf/app.ini, repos at git/repositories, SQLite at data/gitea.db
+      - ${DATA_PATH}/forgejo:/var/lib/gitea
+    ports:
+      - 127.0.0.1:2222:2222
+    environment:
+      FORGEJO__server__DOMAIN: ${TS_HOST}
+      FORGEJO__server__ROOT_URL: https://${TS_HOST}:3001/
+      FORGEJO__server__HTTP_PORT: "3000"
+      FORGEJO__server__SSH_DOMAIN: ${TS_HOST}
+      FORGEJO__server__SSH_PORT: "2222"
+      FORGEJO__server__SSH_LISTEN_PORT: "2222"
+      FORGEJO__database__DB_TYPE: sqlite3
+      FORGEJO__security__INSTALL_LOCK: "true"
+      FORGEJO__security__SECRET_KEY: ${FORGEJO_SECRET_KEY}
+      FORGEJO__security__INTERNAL_TOKEN: ${FORGEJO_INTERNAL_TOKEN}
+      # Sign-in from the Tailscale login, see Caddyfile. Forgejo trusts X-WEBAUTH-USER from any source
+      # (tested: TRUSTED_PROXIES does not limit it), so only the network keeps other senders out.
+      FORGEJO__service__ENABLE_REVERSE_PROXY_AUTHENTICATION: "true"
+      FORGEJO__service__ENABLE_REVERSE_PROXY_AUTO_REGISTRATION: "false"
+      # Use X-Forwarded-For from the proxy only, for the real client IP in the logs
+      FORGEJO__security__REVERSE_PROXY_TRUSTED_PROXIES: 172.30.0.10/32
+      FORGEJO__service__DISABLE_REGISTRATION: "true"
+      FORGEJO__service__REQUIRE_SIGNIN_VIEW: "true"
+      FORGEJO__service__DEFAULT_KEEP_EMAIL_PRIVATE: "true"
+      # New repos are private. Make a repo public on purpose, before it gets a GitHub mirror.
+      FORGEJO__repository__DEFAULT_PRIVATE: private
+      FORGEJO__repository__DEFAULT_BRANCH: main
+      # Rebase and squash merges drop jj's change-id header and make divergent changes in jj
+      FORGEJO__repository_0X2E_pull_0X2D_request__DEFAULT_MERGE_STYLE: fast-forward-only
+      # Off: a runner needs Docker access. GitHub Actions still runs on the mirrors.
+      FORGEJO__actions__ENABLED: "false"
+    networks:
+      - forgejo
+
+  forgejo-proxy:
+    container_name: forgejo-proxy
+    image: caddy:2
+    restart: unless-stopped
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - 127.0.0.1:3001:80
+    environment:
+      TS_LOGIN: ${TS_LOGIN}
+      FORGEJO_USER: ${FORGEJO_USER}
+    networks:
+      forgejo:
+        ipv4_address: 172.30.0.10
+
+networks:
+  forgejo:
+    name: forgejo_network
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24

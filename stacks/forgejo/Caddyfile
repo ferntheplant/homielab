@@ -1,0 +1,26 @@
+# Sign-in proxy for Forgejo. Tailscale Serve (:3001) -> this Caddy -> forgejo:3000.
+#
+# Tailscale Serve adds Tailscale-User-Login to each request from a tailnet user and removes any copy
+# that the client sends. Forgejo trusts X-WEBAUTH-USER as the signed-in user (reverse proxy
+# authentication). This proxy removes any X-WEBAUTH-* header from the client, then sets
+# X-WEBAUTH-USER only when the Tailscale login is the owner's. `route` keeps this order.
+#
+# Forgejo accepts X-WEBAUTH-USER from any sender, so the network is the guard. Only this proxy and
+# Forgejo are on forgejo_network, Docker blocks traffic from the other bridge networks, and port 80
+# is published on 127.0.0.1 only. A process on the host itself can still send the header.
+{
+	admin off
+	auto_https off
+}
+
+:80 {
+	@owner header Tailscale-User-Login {$TS_LOGIN}
+
+	route {
+		request_header -X-WEBAUTH-USER
+		request_header -X-WEBAUTH-EMAIL
+		request_header -X-WEBAUTH-FULLNAME
+		request_header @owner X-WEBAUTH-USER {$FORGEJO_USER}
+		reverse_proxy forgejo:3000
+	}
+}

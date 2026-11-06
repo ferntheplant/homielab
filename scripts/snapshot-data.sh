@@ -21,10 +21,10 @@ source "${REPO_DIR}/.env.shared"
 set +a
 
 # Containers that hold a database open in one of the folders below
-CONTAINERS=(karakeep-web beszel syncthing beeper-discord beeper-facebook beeper-signal)
+CONTAINERS=(karakeep-web beszel syncthing beeper-discord beeper-facebook beeper-signal forgejo)
 # Folders under $DATA_PATH to back up. karakeep-meilisearch is left out: Karakeep can rebuild
 # the search index. backrest is left out: its config holds the repo password.
-FOLDERS=(karakeep beszel_data syncthing beeper-discord beeper-facebook beeper-signal langfuse-archive)
+FOLDERS=(karakeep beszel_data syncthing beeper-discord beeper-facebook beeper-signal langfuse-archive forgejo)
 
 # Small image that is already on the box; it only needs sh, cp, rm and mv
 COPY_IMAGE=alpine:3.20
