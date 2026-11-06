@@ -1,6 +1,7 @@
-# lil homie
+# homielab
 
-My home server setup, on two boxes:
+My home server setup, on two boxes. The repo was called `lil-homie` until 2026-11. The checkout on micro-homie
+is still `~/lil-homie`, because `DATA_PATH` and the systemd units use that path.
 
 - **micro-homie**: a little Intel micro PC (i5-6500, 8 GB RAM, 256 GB SATA SSD) with Debian 13. It runs every
   container stack. Most of this repo is for it.
@@ -15,7 +16,7 @@ My home server setup, on two boxes:
 Caddyfile                      reverse proxy routes (caddy stack)
 glance.Dockerfile              glance + tzdata (built by the homie stack)
 glance-config/                 dashboard config, mounted into glance
-scripts/                       snapshot, classifier, and micro-homie setup scripts
+scripts/                       snapshot, classifier, GitHub mirror, and micro-homie setup scripts
 stacks/<name>/                 one docker compose project per stack (+ .env.tpl: 1Password refs)
 stacks/manage.sh               start/stop/update everything
 systemd/                       user timers for micro-homie (snapshot, update, classifier)
@@ -39,7 +40,7 @@ data/                          all service data ($DATA_PATH, gitignored)
 From a fresh Debian 13 install with Tailscale on it:
 
 ```bash
-git clone https://github.com/ferntheplant/lil-homie.git ~/lil-homie
+git clone https://github.com/ferntheplant/homielab.git ~/lil-homie   # the read-only mirror, see GitHub mirrors
 sudo ~/lil-homie/scripts/setup-micro-homie.sh     # Docker, 1Password CLI, git/rsync, linger, sysctl, timezone
 # log out and back in to get the docker group, then:
 umask 077; mkdir -p ~/.config/lil-homie
@@ -47,6 +48,8 @@ cat > ~/.config/lil-homie/op-token                # paste the service account to
 ~/lil-homie/stacks/manage.sh start
 ~/lil-homie/scripts/install-systemd-units.sh
 ```
+
+When Forgejo runs, point the checkout at it, see [This repo on micro-homie](#this-repo-on-micro-homie).
 
 `setup-micro-homie.sh` also sets `net.ipv4.ip_nonlocal_bind=1`. Docker binds Syncthing to the tailnet IP, and at boot
 Docker can start before `tailscaled` has that IP. The disk is not encrypted, so the box boots without a person at the
@@ -369,6 +372,51 @@ To reset the password, run `docker exec -it forgejo forgejo admin user change-pa
 - Actions is off. A runner needs Docker access.
 - Not in the Glance services monitor: Glance cannot reach `forgejo_network`, and a container cannot reach Tailscale
   Serve on this box. The Docker widget shows the container state.
+
+### GitHub mirrors
+
+The public repos on GitHub (`github.com/ferntheplant/<repo>`) are read-only mirrors of Forgejo. Forgejo is the
+source. Push to Forgejo only. Mirrored now: `homielab`, `crux`, `baseline`, `dotfiles`, `fjorndotdev`.
+
+- **Push mirror:** each repo has a Forgejo push mirror over SSH. It syncs on each push and every 8 hours. It
+  force-pushes `refs/heads/*` and `refs/tags/*`, and it deletes a branch or tag on GitHub that Forgejo does not have.
+  See the state in the repo's Settings > Repository > Mirror settings.
+- **Keys:** Forgejo makes one SSH key for each mirror. The public key is a deploy key with write access on that one
+  GitHub repo. `SECRET_KEY` encrypts the private key in the Forgejo database.
+- **Read-only:** two GitHub rulesets on each repo (branches, tags) block the creation, update, and deletion of refs
+  for everyone except deploy keys. A push from your own account fails with `push declined due to repository rule
+  violations`, so an old clone that still points at GitHub cannot lose commits.
+- **GitHub features:** issues, wiki, and projects are off. Old pull requests stay on GitHub. Forgejo did not import
+  them, and it did not import GitHub's `refs/pull/*` refs, because Forgejo uses those names for its own PRs.
+- **GitHub Actions** still runs on each mirror push.
+
+To mirror another repo, make it public in Forgejo (public marks a mirrored repo), then run:
+
+```bash
+scripts/forgejo-github-mirror.sh <repo>
+```
+
+The script stops if GitHub has a commit that Forgejo does not have. If the GitHub repo is new or private, it scans
+the full history with gitleaks first, because the mirror makes the history public. Then it makes the GitHub repo if
+it does not exist, and sets up the mirror, deploy key, rulesets, and settings. At the end, it checks that the refs
+match.
+
+To move a repo from GitHub to Forgejo, import it first (New Migration > Git, from the GitHub HTTPS URL), then delete
+its `refs/pull/*` refs, then run the script.
+
+To stop a mirror, delete it in Forgejo, then delete the deploy key and the two rulesets on GitHub.
+
+### This repo on micro-homie
+
+The checkout at `~/lil-homie` pushes to Forgejo with its own key, `~/.ssh/homielab_forgejo`. That key is a deploy key
+with write access on `homielab` only. It cannot read or write other repos. The repo's git config selects the key:
+
+```bash
+git config core.sshCommand "ssh -i ~/.ssh/homielab_forgejo -o IdentitiesOnly=yes"
+git remote set-url origin ssh://git@micro-homie.tail8cc0d3.ts.net:2222/ferntheplant/homielab.git
+```
+
+On a new box, make a new key and add it in Forgejo: homielab > Settings > Deploy keys, with write access.
 
 ### jj
 
