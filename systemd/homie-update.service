@@ -3,6 +3,6 @@ Description=Snapshot data, pull and rebuild images, recreate changed containers
 
 [Service]
 Type=oneshot
-ExecStart=%h/lil-homie/stacks/manage.sh update
+ExecStart=%h/homielab/stacks/manage.sh update
 # A stuck pull or op call must not block next week's run
 TimeoutStartSec=2h

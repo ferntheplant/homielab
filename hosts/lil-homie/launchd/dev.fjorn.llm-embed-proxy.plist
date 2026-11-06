@@ -7,7 +7,7 @@
        Karakeep reaches it through Tailscale Serve (tcp 8081). -->
   <key>ProgramArguments</key><array>
     <string>/usr/bin/python3</string>
-    <string>/Users/fjorn/lil-homie/hosts/lil-homie/llm/embed_proxy.py</string>
+    <string>/Users/fjorn/homielab/hosts/lil-homie/llm/embed_proxy.py</string>
     <string>--port</string><string>8081</string>
   </array>
   <key>StandardOutPath</key><string>/Users/fjorn/Library/Logs/llama-server/embed-proxy.log</string>

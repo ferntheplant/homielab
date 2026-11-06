@@ -3,5 +3,5 @@ Description=Snapshot stateful data for Backrest (stops the database containers f
 
 [Service]
 Type=oneshot
-ExecStart=%h/lil-homie/scripts/snapshot-data.sh
+ExecStart=%h/homielab/scripts/snapshot-data.sh
 TimeoutStartSec=15min

@@ -7,7 +7,7 @@
        no Tailscale Serve entry, no auth. Holds no model, only numpy. -->
   <key>ProgramArguments</key><array>
     <string>/Users/fjorn/anyjev-venv/bin/python</string>
-    <string>/Users/fjorn/lil-homie/hosts/lil-homie/llm/decide.py</string>
+    <string>/Users/fjorn/homielab/hosts/lil-homie/llm/decide.py</string>
     <string>serve</string>
     <string>--port</string><string>8766</string>
   </array>

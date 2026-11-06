@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-  <!-- LaunchDaemon (root). Install with: sudo ~/lil-homie/scripts/install-tailscaled-daemon.sh -->
+  <!-- LaunchDaemon (root). Install with: sudo ~/homielab/scripts/install-tailscaled-daemon.sh -->
   <key>Label</key><string>dev.fjorn.tailscaled</string>
   <key>ProgramArguments</key><array>
     <string>/usr/local/libexec/lil-homie/tailscaled</string>

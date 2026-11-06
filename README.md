@@ -1,7 +1,7 @@
 # homielab
 
-My home server setup, on two boxes. The repo was called `lil-homie` until 2026-11. The checkout on micro-homie
-is still `~/lil-homie`, because `DATA_PATH` and the systemd units use that path.
+My home server setup, on two boxes. The repo was called `lil-homie` until 2026-11. The Mac is still called
+lil-homie. The checkout is `~/homielab` on both boxes.
 
 - **micro-homie**: a little Intel micro PC (i5-6500, 8 GB RAM, 256 GB SATA SSD) with Debian 13. It runs every
   container stack. Most of this repo is for it.
@@ -40,13 +40,13 @@ data/                          all service data ($DATA_PATH, gitignored)
 From a fresh Debian 13 install with Tailscale on it:
 
 ```bash
-git clone https://github.com/ferntheplant/homielab.git ~/lil-homie   # the read-only mirror, see GitHub mirrors
-sudo ~/lil-homie/scripts/setup-micro-homie.sh     # Docker, 1Password CLI, git/rsync, linger, sysctl, timezone
+git clone https://github.com/ferntheplant/homielab.git ~/homielab   # the read-only mirror, see GitHub mirrors
+sudo ~/homielab/scripts/setup-micro-homie.sh     # Docker, 1Password CLI, git/rsync, linger, sysctl, timezone
 # log out and back in to get the docker group, then:
-umask 077; mkdir -p ~/.config/lil-homie
-cat > ~/.config/lil-homie/op-token                # paste the service account token (see Secrets), then Ctrl-D
-~/lil-homie/stacks/manage.sh start
-~/lil-homie/scripts/install-systemd-units.sh
+umask 077; mkdir -p ~/.config/homielab
+cat > ~/.config/homielab/op-token                # paste the service account token (see Secrets), then Ctrl-D
+~/homielab/stacks/manage.sh start
+~/homielab/scripts/install-systemd-units.sh
 ```
 
 When Forgejo runs, point the checkout at it, see [This repo on micro-homie](#this-repo-on-micro-homie).
@@ -82,7 +82,7 @@ bad data. The repair source is the other copy: R2 for backups, or the other Sync
 - **Scrub:** `btrfs-scrub-storage.timer` reads every block on the 1st of each month at 05:00 and checks it.
 - **Spin-down:** not set. The drive uses its own defaults.
 
-`sudo ~/lil-homie/scripts/setup-storage.sh` does the host setup: packages, mount point, fstab, mount, subvolumes,
+`sudo ~/homielab/scripts/setup-storage.sh` does the host setup: packages, mount point, fstab, mount, subvolumes,
 btrbk, and the scrub timer. It does not wipe or format the drive. On a new drive, do those steps by hand first.
 Always use the by-id path, because `/dev/sdX` letters can change:
 
@@ -143,7 +143,7 @@ safe to commit. `manage.sh` wraps every compose call in `op run --env-file .env.
 files lists only the variables it needs (`VAR: ${VAR}`).
 
 `op` authenticates with a read-only service account (`lil-homie-server`). Its token is in
-`~/.config/lil-homie/op-token` (mode 0600) on micro-homie. `manage.sh` and the classifier read it from there.
+`~/.config/homielab/op-token` (mode 0600) on micro-homie. `manage.sh` and the classifier read it from there.
 
 To add or change a secret:
 
@@ -408,8 +408,8 @@ To stop a mirror, delete it in Forgejo, then delete the deploy key and the two r
 
 ### This repo on micro-homie
 
-The checkout at `~/lil-homie` pushes to Forgejo with its own key, `~/.ssh/homielab_forgejo`. That key is a deploy key
-with write access on `homielab` only. It cannot read or write other repos. The repo's git config selects the key:
+The checkout at `~/homielab` pushes to Forgejo with its own key, `~/.ssh/homielab_forgejo`. That key is a deploy key
+with write access on `homielab` only. The repo's git config selects the key:
 
 ```bash
 git config core.sshCommand "ssh -i ~/.ssh/homielab_forgejo -o IdentitiesOnly=yes"
@@ -417,6 +417,13 @@ git remote set-url origin ssh://git@micro-homie.tail8cc0d3.ts.net:2222/fernthepl
 ```
 
 On a new box, make a new key and add it in Forgejo: homielab > Settings > Deploy keys, with write access.
+
+The deploy key is not a security limit on micro-homie. Two things give every process that runs as `fjorn` full
+access to Forgejo:
+
+- `fjorn` is in the `docker` group, which is the same as root. It can change Forgejo's data directly.
+- micro-homie is a tailnet device that you own, so Tailscale Serve signs its requests in as you, git over HTTPS
+  included (tested).
 
 ### jj
 
@@ -480,7 +487,7 @@ Forgot the login password? There is no email setup, so reset it on micro-homie. 
 password and sets it on the PocketBase superuser and on the Beszel user (same email):
 
 ```bash
-~/lil-homie/scripts/beszel-reset-password.sh
+~/homielab/scripts/beszel-reset-password.sh
 ```
 
 ## lil-homie (the Mac)
@@ -519,7 +526,7 @@ profile); `hosts/lil-homie/Nanobrewfile` adds the rest, including `llama.cpp`.
 
 ```bash
 nb bundle install ~/dotfiles/.Nanobrewfile
-nb bundle install ~/lil-homie/hosts/lil-homie/Nanobrewfile
+nb bundle install ~/homielab/hosts/lil-homie/Nanobrewfile
 ```
 
 `tailscaled` runs as the `dev.fjorn.tailscaled` LaunchDaemon from a root-owned copy of the nanobrew binary. After
@@ -527,7 +534,7 @@ nb bundle install ~/lil-homie/hosts/lil-homie/Nanobrewfile
 `/var/log/lil-homie-tailscaled-install.log`):
 
 ```bash
-sudo ~/lil-homie/hosts/lil-homie/install-tailscaled-daemon.sh
+sudo ~/homielab/hosts/lil-homie/install-tailscaled-daemon.sh
 ```
 
 If MagicDNS doesn't resolve on a CLI-only client, add a resolver file:

@@ -11,7 +11,7 @@ Runs every 5 minutes from systemd/karakeep-classify.timer.
     scripts/karakeep-classify.py [--dry-run] [--limit N]
 
 API key: $KARAKEEP_API_KEY, else op://lil-homie/homie/KARAKEEP_API_KEY through the read-only
-1Password service account token in ~/.config/lil-homie/op-token (same as stacks/manage.sh).
+1Password service account token in ~/.config/homielab/op-token (same as stacks/manage.sh).
 llama-server runs on lil-homie (the Mac), published on the tailnet by Tailscale Serve.
 """
 import argparse
@@ -27,7 +27,7 @@ import urllib.request
 KARAKEEP = os.environ.get("KARAKEEP_URL", "http://127.0.0.1:3000")
 LLM = os.environ.get("LLM_URL", "http://lil-homie:8080")
 MODEL = os.environ.get("CLASSIFY_MODEL", "qwen3.5-4b")
-OP_TOKEN_FILE = os.path.expanduser("~/.config/lil-homie/op-token")
+OP_TOKEN_FILE = os.path.expanduser("~/.config/homielab/op-token")
 
 KINDS = ("tool", "reading")
 PROMPT = """Classify a saved web bookmark as exactly one kind.

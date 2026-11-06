@@ -94,7 +94,7 @@ curl -s 127.0.0.1:8766/decide -d '{
 ```
 
 ```python
-import sys; sys.path.insert(0, "/Users/fjorn/lil-homie/hosts/lil-homie/llm")
+import sys; sys.path.insert(0, "/Users/fjorn/homielab/hosts/lil-homie/llm")
 from decide import decide          # run with ~/anyjev-venv/bin/python
 decide("Ticket: ...", [{"name": "team", "kind": "choice", "text": "Which team?", "options": ["billing", "tech"]}],
        level="L0")

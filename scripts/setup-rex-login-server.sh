@@ -29,7 +29,7 @@ if [[ ! -e "${ACCOUNTS_FILE}.orig" ]]; then
 fi
 cat > "${ACCOUNTS_FILE}" <<EOF
 // Rex login server accounts. ${ACCOUNTS_FILE}.orig explains the format.
-// Written by ~/lil-homie/scripts/setup-rex-login-server.sh
+// Written by ~/homielab/scripts/setup-rex-login-server.sh
 {
   "version": 1,
   "accounts": {

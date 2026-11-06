@@ -3,5 +3,5 @@ Description=Tag new Karakeep bookmarks as tool or reading (llama-server on lil-h
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/python3 %h/lil-homie/scripts/karakeep-classify.py
+ExecStart=/usr/bin/python3 %h/homielab/scripts/karakeep-classify.py
 TimeoutStartSec=1h

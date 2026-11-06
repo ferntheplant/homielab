@@ -1,7 +1,7 @@
 #!/bin/bash
 # Reset the Beszel login password without email. Run on micro-homie with the homie stack up:
 #
-#   ~/lil-homie/scripts/beszel-reset-password.sh [email]     (default: me@fjorn.dev)
+#   ~/homielab/scripts/beszel-reset-password.sh [email]     (default: me@fjorn.dev)
 #
 # Beszel is PocketBase. The `beszel superuser upsert` CLI sets the superuser (PocketBase admin)
 # password. The script then uses the superuser API to set the same password on the Beszel user

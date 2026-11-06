@@ -4,7 +4,7 @@
 <plist version="1.0"><dict>
   <key>Label</key><string>dev.fjorn.beszel-agent</string>
   <key>ProgramArguments</key><array>
-    <string>/Users/fjorn/lil-homie/hosts/lil-homie/beszel-agent.sh</string>
+    <string>/Users/fjorn/homielab/hosts/lil-homie/beszel-agent.sh</string>
   </array>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>

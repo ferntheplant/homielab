@@ -28,7 +28,7 @@ NC='\033[0m' # No Color
 
 # Secrets live in the 1Password "lil-homie" vault. Each stack's .env.tpl maps env vars to op:// refs,
 # and `op run` resolves them for compose. The read-only service account token is in a 0600 file.
-OP_TOKEN_FILE="${HOME}/.config/lil-homie/op-token"
+OP_TOKEN_FILE="${HOME}/.config/homielab/op-token"
 
 load_op_token() {
     if [[ -n "${OP_SERVICE_ACCOUNT_TOKEN:-}" ]]; then

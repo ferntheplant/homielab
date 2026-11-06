@@ -7,7 +7,7 @@
        both loaded at start. Karakeep reaches it through Tailscale Serve (tcp 8080). -->
   <key>ProgramArguments</key><array>
     <string>/opt/nanobrew/prefix/bin/llama-server</string>
-    <string>--models-preset</string><string>/Users/fjorn/lil-homie/hosts/lil-homie/llm/models.ini</string>
+    <string>--models-preset</string><string>/Users/fjorn/homielab/hosts/lil-homie/llm/models.ini</string>
     <string>--models-max</string><string>2</string>
     <string>--host</string><string>127.0.0.1</string>
     <string>--port</string><string>8080</string>
