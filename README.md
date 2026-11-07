@@ -9,6 +9,7 @@ lil-homie. The checkout is `~/homielab` on both boxes.
   llama-server (the local LLM), the Beeper iMessage bridge, a Beszel agent, and a small status server for the
   dashboard. See
   [lil-homie (the Mac)](#lil-homie-the-mac).
+- **gaming-homie**: the Windows 11 gaming PC. It runs only a Beszel agent (see [Beszel](#beszel)).
 
 ## Layout
 
@@ -573,7 +574,8 @@ Widgets:
 - [Karakeep](https://github.com/glanceapp/community-widgets/blob/main/widgets/karakeep-dashboard/README.md): calls `karakeep-web:3000` directly over `caddy_network`
 - Services: Glance's built-in `monitor` widget, checking each service over `caddy_network`
 - [Beszel](https://github.com/glanceapp/community-widgets/blob/main/widgets/beszel-metrics/README.md): proxied by Caddy
-  behind `/beszel`, so it needs `APP_URL` and `handle_path`. TODO: find a way to notify when the API token is expired
+  behind `/beszel`, so it needs `APP_URL` and `handle_path`. The API token expires once a year, see [Beszel](#beszel).
+  TODO: find a way to notify when the API token is expired
 - [Syncthing](https://github.com/glanceapp/community-widgets/blob/main/widgets/syncthing/README.md): hard coded values swapped for env variables
 - [Backrest](https://github.com/not-first/restic-glance-extension): for a remote repo you only need the env variables.
   With no snapshots the widget shows weird errors, so make sure at least one snapshot exists
@@ -586,11 +588,21 @@ Widgets:
 ## Beszel
 
 The hub runs in the homie stack. Each machine has an agent that connects to the hub over WebSocket (`HUB_URL` +
-`TOKEN`). The agent env file is `~/.config/beszel/beszel-agent.env` on each machine and holds `KEY` (the hub public
-key) and `TOKEN` (from "Add system" in the hub).
+`TOKEN`). On micro-homie and lil-homie, the agent env file is `~/.config/beszel/beszel-agent.env`. It holds `KEY`
+(the hub public key) and `TOKEN` (from "Add system" in the hub).
 
 - micro-homie: the `beszel-agent` container, `HUB_URL=http://127.0.0.1:8090`
 - lil-homie: the `dev.fjorn.beszel-agent` launchd agent, `HUB_URL=https://micro-homie.tail8cc0d3.ts.net/beszel`
+- gaming-homie: the `beszel-agent` Windows service, `HUB_URL=https://micro-homie.tail8cc0d3.ts.net/beszel`.
+  The [Windows install script](https://www.beszel.dev/guide/agent-installation#windows) installed the agent and NSSM
+  with WinGet. NSSM runs the agent as a service and keeps `KEY`, `TOKEN`, `HUB_URL` and `PORT` in the service
+  settings, not in an env file. The log is `C:\ProgramData\beszel-agent\logs\beszel-agent.log`. In an admin
+  PowerShell, `nssm status beszel-agent` shows the state and `nssm edit beszel-agent` opens the settings. To update,
+  run `winget upgrade --exact --id henrygd.beszel-agent`, then `nssm restart beszel-agent`. The service runs
+  `WinGet\Links\beszel-agent.exe`, so the path stays the same after an upgrade
+
+SSH to gaming-homie is `ssh fjorn@gaming-homie` (Windows OpenSSH; the default shell is `cmd.exe`). The account is an
+admin, so its keys are in `C:\ProgramData\ssh\administrators_authorized_keys`, not in `~\.ssh\authorized_keys`.
 
 Forgot the login password? There is no email setup, so reset it on micro-homie. The script asks for the new
 password and sets it on the PocketBase superuser and on the Beszel user (same email):
@@ -598,6 +610,21 @@ password and sets it on the PocketBase superuser and on the Beszel user (same em
 ```bash
 ~/homielab/scripts/beszel-reset-password.sh
 ```
+
+The Glance Metrics widget reads the hub API with `BESZEL_API_TOKEN`. A normal login token expires after 7 days, so
+the widget uses a token that the superuser issues for one year. The current token expires on 2027-11-07. When the
+widget shows "No systems found", make a new token:
+
+1. On micro-homie, run `~/homielab/scripts/beszel-glance-token.sh`. It asks for the superuser password and writes
+   the token to `~/.config/homielab/beszel-api-token`.
+2. On a Mac where your own `op` account is signed in, copy the token into 1Password. Keep the single quotes, so
+   that `~` expands on micro-homie:
+
+   ```bash
+   op item edit homie --vault homielab "BESZEL_API_TOKEN=$(ssh micro-homie 'cat ~/.config/homielab/beszel-api-token')"
+   ```
+
+3. On micro-homie, run `~/homielab/stacks/manage.sh start homie` to recreate Glance with the new token.
 
 ## lil-homie (the Mac)
 
