@@ -228,9 +228,19 @@ traffic to the tailnet, except:
 - karakeep to lil-homie 8080 and 8081 (llama-server), and Glance to lil-homie 8765 (agent status)
 - Syncthing to its peers on port 22000
 
-It also drops container traffic to micro-homie's own tailnet addresses. It does not apply to host processes or to a
-container with `network_mode: host` (`beszel-agent`). The CI jobs have their own, stricter sandbox (see
-[Forgejo Actions](#forgejo-actions)).
+It also drops container traffic to micro-homie's own tailnet addresses. The CI jobs have their own, stricter sandbox
+(see [Forgejo Actions](#forgejo-actions)).
+
+The guard does not apply to host processes or to a container with `network_mode: host` (`beszel-agent`). Their
+traffic still carries your identity. The fix for those is to tag micro-homie in the Tailscale admin console, so that
+the box has no user identity. That needs these changes first:
+
+- ACL rules that let the tag reach lil-homie (8080, 8081, 8765) and the Syncthing peers (22000)
+- A new way for `scripts/forgejo-github-mirror.sh` to delete its token: it signs in to the Forgejo web UI through
+  Tailscale Serve as this box, which works only while the box is yours
+
+The rules name lil-homie by its tailnet IP (`define lil_homie`). If lil-homie gets a new IP (for example, after it
+is removed and added to the tailnet again), change the IP and run the script again.
 
 To install it, or to apply a change to the rules, run:
 
@@ -245,8 +255,10 @@ Docker starts. The table is separate from Docker's and Tailscale's rules, so the
 - **Rule counters:** `sudo nft list table inet homielab_tailnet_guard`.
 - **A new container that needs a tailnet service:** add an exception to the `from_container` chain, then run the
   script again.
+- **Turn it off:** `sudo systemctl disable --now homielab-tailnet-guard`. Stopping the unit deletes the table.
 - **Do not** enable Debian's `nftables.service` with its default `/etc/nftables.conf`. That file starts with
   `flush ruleset`, which removes this table and Docker's rules.
+
 ## Rex
 
 Rex runs on micro-homie as the **login server** (`rex-login-server.service`), not the package's default shared
