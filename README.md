@@ -214,6 +214,39 @@ All access is via Tailscale. The server is `micro-homie.tail8cc0d3.ts.net`. Serv
 `.env.shared` holds the tailnet names (`TS_HOST`, `LIL_HOMIE_HOST`). The compose files and the Glance config read
 them, so a rename is a one-line change.
 
+### Tailnet guard
+
+micro-homie is a device that you own, so its traffic on the tailnet carries your identity. Tailscale Serve on
+another device signs that traffic in as you: Rex on `lil-homie-rex`, for example, which gives a shell on the Mac.
+Container traffic leaves through micro-homie too, and some containers run code that is not fully trusted.
+`karakeep-chrome`, for example, loads every page that you bookmark.
+
+The tailnet guard is an nftables table (`hosts/micro-homie/tailnet-guard/tailnet-guard.nft`). It drops container
+traffic to the tailnet, except:
+
+- MagicDNS (`100.100.100.100`, port 53)
+- karakeep to lil-homie 8080 and 8081 (llama-server), and Glance to lil-homie 8765 (agent status)
+- Syncthing to its peers on port 22000
+
+It also drops container traffic to micro-homie's own tailnet addresses. It does not apply to host processes or to a
+container with `network_mode: host` (`beszel-agent`). The CI jobs have their own, stricter sandbox (see
+[Forgejo Actions](#forgejo-actions)).
+
+To install it, or to apply a change to the rules, run:
+
+```bash
+sudo ~/homielab/scripts/setup-tailnet-guard.sh
+```
+
+The script copies the rules to `/etc/homielab/`. The `homielab-tailnet-guard` system unit loads them at boot, before
+Docker starts. The table is separate from Docker's and Tailscale's rules, so they cannot reorder or remove it.
+
+- **Dropped traffic:** `sudo journalctl -k --grep 'tailnet-guard drop'`. The log is limited to 6 lines a minute.
+- **Rule counters:** `sudo nft list table inet homielab_tailnet_guard`.
+- **A new container that needs a tailnet service:** add an exception to the `from_container` chain, then run the
+  script again.
+- **Do not** enable Debian's `nftables.service` with its default `/etc/nftables.conf`. That file starts with
+  `flush ruleset`, which removes this table and Docker's rules.
 ## Rex
 
 Rex runs on micro-homie as the **login server** (`rex-login-server.service`), not the package's default shared

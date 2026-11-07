@@ -1,0 +1,55 @@
+#!/usr/sbin/nft -f
+# Keep Docker containers off the tailnet. See README "Tailnet guard".
+#
+# Traffic that leaves micro-homie on tailscale0 carries micro-homie's tailnet identity, which is
+# the owner's. Tailscale Serve on another device (Rex on lil-homie-rex, for example) then treats
+# a container as the owner. A container runs code that is not fully trusted: karakeep-chrome
+# loads every bookmarked page, and the Beeper bridges and Backrest talk to outside services.
+#
+# This table drops container traffic to the tailnet, except the flows below. It is its own nft
+# table, so Docker's and Tailscale's rules cannot reorder or remove it. Its drop is final for a
+# packet. An accept here does not skip their rules.
+#
+# Host processes are not affected. A container with network_mode: host (beszel-agent) is a host
+# process here.
+
+define lil_homie = 100.85.99.90
+define quad100 = 100.100.100.100
+define quad100_v6 = fd7a:115c:a1e0::53
+
+# Remove the table if it exists, so a reload replaces it
+table inet homielab_tailnet_guard
+delete table inet homielab_tailnet_guard
+
+table inet homielab_tailnet_guard {
+	# Containers -> other tailnet devices (routed through this box)
+	chain forward {
+		type filter hook forward priority filter - 10; policy accept;
+		oifname "tailscale0" iifname "docker0" jump from_container
+		oifname "tailscale0" iifname "br-*" jump from_container
+	}
+
+	chain from_container {
+		# MagicDNS: tailnet names (lil-homie, *.ts.net) and the host's upstream DNS
+		ip daddr $quad100 meta l4proto { tcp, udp } th dport 53 accept
+		ip6 daddr $quad100_v6 meta l4proto { tcp, udp } th dport 53 accept
+		# karakeep -> llama-server (8080 chat, 8081 embeddings); Glance -> agent status (8765).
+		# Serve TCP forwards and a read-only status page: neither acts on the caller's identity.
+		ip daddr $lil_homie tcp dport { 8080, 8081, 8765 } accept
+		# Syncthing -> its peers. Syncthing authenticates devices by their own keys.
+		meta l4proto { tcp, udp } th dport 22000 accept
+		counter log prefix "tailnet-guard drop: " level info limit rate 6/minute drop
+		counter drop
+	}
+
+	# Containers -> this box's own tailnet addresses (Tailscale Serve: Forgejo, Rex login).
+	# Serve binds those listeners to tailscale0, so they refuse this traffic already (tested).
+	# This drop keeps it that way if that ever changes.
+	chain input {
+		type filter hook input priority filter - 10; policy accept;
+		iifname "docker0" ip daddr 100.64.0.0/10 drop
+		iifname "br-*" ip daddr 100.64.0.0/10 drop
+		iifname "docker0" ip6 daddr fd7a:115c:a1e0::/48 drop
+		iifname "br-*" ip6 daddr fd7a:115c:a1e0::/48 drop
+	}
+}

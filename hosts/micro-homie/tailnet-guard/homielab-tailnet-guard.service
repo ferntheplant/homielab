@@ -1,0 +1,16 @@
+# Loads tailnet-guard.nft before Docker starts, so no container runs without it.
+# Installed by scripts/setup-tailnet-guard.sh.
+[Unit]
+Description=Keep Docker containers off the tailnet (homielab)
+Before=docker.service
+Wants=network-pre.target
+After=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/nft -f /etc/homielab/tailnet-guard.nft
+ExecStop=/usr/sbin/nft delete table inet homielab_tailnet_guard
+
+[Install]
+WantedBy=multi-user.target
