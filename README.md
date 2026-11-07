@@ -356,6 +356,9 @@ journalctl --user -u karakeep-classify.service              # log
 - web: `https://micro-homie.tail8cc0d3.ts.net:3001/`
 - git: `ssh://git@micro-homie.tail8cc0d3.ts.net:2222/ferntheplant/<repo>.git`
 
+Push to create is on for my user: a push to a `ferntheplant/<repo>` that does not exist creates it as a private repo.
+A push from a deploy key cannot create a repo, because it needs a key on the user account.
+
 Files are in `stacks/forgejo/`. Data is in `data/forgejo`: `custom/conf/app.ini`, the repos in `git/repositories`,
 and the SQLite database in `data/gitea.db`. The compose file sets the config through `FORGEJO__<section>__<KEY>`
 variables, which Forgejo writes into `app.ini` at each start. To change a setting, edit the compose file, not

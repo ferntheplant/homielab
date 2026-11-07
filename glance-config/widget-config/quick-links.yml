@@ -6,6 +6,9 @@
       - title: karakeep
         url: https://${TS_HOST}:3003
         icon: sh:karakeep
+      - title: forgejo
+        url: https://${TS_HOST}:3001
+        icon: sh:forgejo
 
     - title: management
       links:

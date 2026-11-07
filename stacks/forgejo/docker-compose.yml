@@ -37,6 +37,9 @@ services:
       FORGEJO__service__DEFAULT_KEEP_EMAIL_PRIVATE: "true"
       # New repos are private. Make a repo public on purpose, before it gets a GitHub mirror.
       FORGEJO__repository__DEFAULT_PRIVATE: private
+      # Push to a repo that does not exist yet under my user to create it. It is private, as above.
+      FORGEJO__repository__ENABLE_PUSH_CREATE_USER: "true"
+      FORGEJO__repository__DEFAULT_PUSH_CREATE_PRIVATE: "true"
       FORGEJO__repository__DEFAULT_BRANCH: main
       # No wiki or projects on any repo. Issues, PRs, packages, and Actions stay.
       FORGEJO__repository__DISABLED_REPO_UNITS: repo.wiki,repo.projects
