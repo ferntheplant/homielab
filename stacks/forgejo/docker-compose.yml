@@ -38,6 +38,8 @@ services:
       # New repos are private. Make a repo public on purpose, before it gets a GitHub mirror.
       FORGEJO__repository__DEFAULT_PRIVATE: private
       FORGEJO__repository__DEFAULT_BRANCH: main
+      # No wiki or projects on any repo. Issues, PRs, packages, and Actions stay.
+      FORGEJO__repository__DISABLED_REPO_UNITS: repo.wiki,repo.projects
       # Squash: the PR title and description become the commit on main (crux and baseline use this)
       FORGEJO__repository_0X2E_pull_0X2D_request__DEFAULT_MERGE_STYLE: squash
       # CI runs on the forgejo-runner stack. `uses: actions/checkout@v7` and the like resolve to

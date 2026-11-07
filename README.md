@@ -416,6 +416,7 @@ To reset the password, run `docker exec -it forgejo forgejo admin user change-pa
   repo says. The squash message comes from `.forgejo/default_merge_message/SQUASH_TEMPLATE.md` in the repo: the PR
   title and description. The web merge form uses the template. The API merge does not.
 - Actions is on. See [Forgejo Actions](#forgejo-actions).
+- Wiki and projects are off on every repo (`DISABLED_REPO_UNITS`). They do not show in the repo menu or settings.
 - Not in the Glance services monitor: Glance cannot reach `forgejo_network`, and a container cannot reach Tailscale
   Serve on this box. The Docker widget shows the container state.
 
@@ -435,8 +436,9 @@ source. Push to Forgejo only. Mirrored now: `homielab`, `crux`, `baseline`, `dot
 - **GitHub features:** issues, wiki, and projects are off. Old pull requests stay on GitHub. Forgejo did not import
   them, and it did not import GitHub's `refs/pull/*` refs, because Forgejo uses those names for its own PRs.
 - **GitHub Actions:** crux and baseline keep their workflows in `.forgejo/workflows`, so GitHub runs nothing for
-  them. fjorndotdev still deploys from GitHub Actions on each mirror push to `main`, because its Cloudflare secrets
-  are on GitHub. Actions is off for fjorndotdev in Forgejo, so the deploy does not also run there.
+  them. fjorndotdev keeps its deploy workflow in `.github/workflows`, which Forgejo also reads. It deploys from
+  Forgejo, with the Cloudflare secrets in the Forgejo repo. Actions is off for fjorndotdev on GitHub, so the deploy
+  does not also run there.
 
 To mirror another repo, make it public in Forgejo (public marks a mirrored repo), then run:
 
