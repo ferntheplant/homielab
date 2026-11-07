@@ -6,7 +6,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "${SCRIPT_DIR}")"
-STACKS=("caddy" "beeper" "homie" "karakeep" "forgejo")
+STACKS=("caddy" "beeper" "homie" "karakeep" "forgejo" "forgejo-runner")
 SHARED_ENV_FILE="${REPO_DIR}/.env.shared"
 
 # Tailscale Serve: tailnet HTTPS port -> local target. Every target binds to 127.0.0.1 only.

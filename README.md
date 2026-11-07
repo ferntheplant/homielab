@@ -367,9 +367,10 @@ To reset the password, run `docker exec -it forgejo forgejo admin user change-pa
 
 - New repos are private in the web form (`DEFAULT_PRIVATE=private`). The API does not use this setting: a repo made
   through the API is public unless the call sends `"private": true`.
-- The default merge style for pull requests is fast-forward only. Rebase and squash merges write new commits without
-  jj's `change-id` header, and jj then shows divergent changes.
-- Actions is off. A runner needs Docker access.
+- The default merge style for pull requests is squash. crux and baseline allow squash only, as BASELINE.md in each
+  repo says. The squash message comes from `.forgejo/default_merge_message/SQUASH_TEMPLATE.md` in the repo: the PR
+  title and description. The web merge form uses the template. The API merge does not.
+- Actions is on. See [Forgejo Actions](#forgejo-actions).
 - Not in the Glance services monitor: Glance cannot reach `forgejo_network`, and a container cannot reach Tailscale
   Serve on this box. The Docker widget shows the container state.
 
@@ -388,7 +389,9 @@ source. Push to Forgejo only. Mirrored now: `homielab`, `crux`, `baseline`, `dot
   violations`, so an old clone that still points at GitHub cannot lose commits.
 - **GitHub features:** issues, wiki, and projects are off. Old pull requests stay on GitHub. Forgejo did not import
   them, and it did not import GitHub's `refs/pull/*` refs, because Forgejo uses those names for its own PRs.
-- **GitHub Actions** still runs on each mirror push.
+- **GitHub Actions:** crux and baseline keep their workflows in `.forgejo/workflows`, so GitHub runs nothing for
+  them. fjorndotdev still deploys from GitHub Actions on each mirror push to `main`, because its Cloudflare secrets
+  are on GitHub. Actions is off for fjorndotdev in Forgejo, so the deploy does not also run there.
 
 To mirror another repo, make it public in Forgejo (public marks a mirrored repo), then run:
 
@@ -405,6 +408,61 @@ To move a repo from GitHub to Forgejo, import it first (New Migration > Git, fro
 its `refs/pull/*` refs, then run the script.
 
 To stop a mirror, delete it in Forgejo, then delete the deploy key and the two rulesets on GitHub.
+
+### Forgejo Actions
+
+CI runs on Forgejo Actions, with one runner on micro-homie: the `forgejo-runner` stack (`stacks/forgejo-runner/`).
+It runs one job at a time. The runner registration is in `data/forgejo-runner/.runner`.
+
+A job runs code from the repo and from every dependency that it installs, so each job runs in a sandbox:
+
+```text
+job container --(forgejo_ci, internal: no route out)--> forgejo-ci --> forgejo:3000
+                                                     --> forgejo-runner (cache)
+                                                     --> forgejo-runner-egress (Squid) --> internet
+```
+
+- **Network:** each job runs in its own container on `forgejo_ci`. That network is internal, so a job reaches only
+  three containers. The egress proxy refuses private, tailnet, link-local, and loopback addresses
+  (`egress/squid.conf`). This is necessary because traffic that leaves micro-homie carries its tailnet identity,
+  which is yours. The runner sets `HTTPS_PROXY` and the related variables in each job.
+- **Forgejo:** jobs reach Forgejo through `forgejo-ci`, a Caddy that removes `X-WEBAUTH-*` headers and sets none
+  (`stacks/forgejo/Caddyfile.ci`). A job signs in with its token only. The runner connects to `http://forgejo-ci`
+  too, and gives that URL to its jobs as `GITHUB_SERVER_URL`. `actions/checkout` clones from there.
+- **Host:** jobs get no Docker socket, no host mounts, and no privileged mode. Each job has a limit of 3 GB of
+  memory, 3 CPUs, and 4096 processes (`config.yml`). A workflow cannot raise these limits or change the network.
+- **Trust:** the runner itself has the Docker socket, which is root on micro-homie. Only the runner image is
+  trusted, not the jobs.
+
+Tested from a job: npm and GitHub work through the proxy. `lil-homie`, Rex, Forgejo through Serve, `100.x`
+addresses, the LAN, and the host get a 403 from the proxy or have no route. A forged `X-WEBAUTH-USER` through
+`forgejo-ci` does not sign in.
+
+Settings:
+
+- `DEFAULT_ACTIONS_URL` is `https://github.com`, so `uses: actions/checkout@v7` resolves as on GitHub.
+- The `ubuntu-latest` label runs in `node:24-trixie`. It has git, curl, python3, and Node, but not `jq` or `yq`.
+  `manage.sh update` does not pull it. Pull it by hand: `docker pull node:24-trixie`.
+- `homielab-bot` is a Forgejo user with write access on crux and baseline. Its token (scopes `write:repository`,
+  `read:user`) is the user-level Actions secret `BUMP_BOT_TOKEN`. Forgejo starts no workflow for a change made with
+  a job's own token, so the weekly bump pushes and opens its PR as the bot, and the PR gets CI.
+- crux and baseline protect `main`: push is off, and the PR check `CI / validate (pull_request)` must pass on an
+  up-to-date branch.
+
+To register the runner again (for example on a new box), stop it, delete `data/forgejo-runner/.runner`, then:
+
+```bash
+cd stacks/forgejo-runner
+docker compose --env-file ../../.env.shared run --rm --no-deps forgejo-runner forgejo-runner register \
+  --no-interactive --instance http://forgejo-ci --name micro-homie --config /config.yml \
+  --token "$(docker exec forgejo forgejo actions generate-runner-token | tail -1)"
+```
+
+Delete the old runner in Site administration > Actions > Runners.
+
+The design keeps the runner in its own stack, so it can move to a dedicated CI box later. A runner on another box
+must reach Forgejo over the tailnet. Its jobs must not use that box's tailnet identity, so tag the box in Tailscale
+first.
 
 ### This repo on micro-homie
 
@@ -429,7 +487,8 @@ access to Forgejo:
 
 jj works with Forgejo as a normal git remote. Tested on Forgejo 17.0.1 with jj 0.47.1: a commit with jj's `change-id`
 header and an SSH signature pushed over SSH, showed as verified, and kept the header after a `git clone`. jj does not
-support Git LFS, so LFS is off.
+support Git LFS, so LFS is off. A squash merge (the default) writes a new commit without the `change-id` header. A
+fast-forward merge keeps it.
 
 ### Updates
 

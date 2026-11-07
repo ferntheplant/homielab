@@ -1,0 +1,41 @@
+# forgejo-runner config. `forgejo-runner generate-config` prints every option with its default.
+log:
+  level: info
+  job_level: info
+
+runner:
+  file: /data/.runner
+  # One job at a time: micro-homie has 4 cores and 8 GB
+  capacity: 1
+  # Jobs reach the internet only through the egress proxy (see docker-compose.yml)
+  envs:
+    HTTP_PROXY: http://forgejo-runner-egress:3128
+    HTTPS_PROXY: http://forgejo-runner-egress:3128
+    http_proxy: http://forgejo-runner-egress:3128
+    https_proxy: http://forgejo-runner-egress:3128
+    NO_PROXY: forgejo-ci,forgejo-runner
+    no_proxy: forgejo-ci,forgejo-runner
+    # Node's own fetch() ignores the variables above without this
+    NODE_USE_ENV_PROXY: "1"
+  timeout: 1h
+  shutdown_timeout: 10m
+  fetch_interval: 5s
+  # `runs-on: ubuntu-latest` runs in this image. It has git, curl, python3, and Node.
+  labels:
+    - ubuntu-latest:docker://node:24-trixie
+
+cache:
+  enabled: true
+  dir: /data/cache
+  # The job containers reach the cache on this name, on forgejo_ci
+  host: forgejo-runner
+
+container:
+  network: forgejo_ci
+  privileged: false
+  # A runaway job must not starve the services on this box
+  options: --memory=3g --memory-swap=3g --cpus=3 --pids-limit=4096
+  # No host paths or volumes in jobs
+  valid_volumes: []
+  # No Docker socket in jobs
+  docker_host: "-"

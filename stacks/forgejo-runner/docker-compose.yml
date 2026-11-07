@@ -1,0 +1,48 @@
+# Forgejo Actions runner. See README "Forgejo Actions".
+#
+# Jobs run code from the repos and from every dependency they install, so they are sandboxed:
+#   - Each job runs in its own container on forgejo_ci (owned by the forgejo stack), an internal
+#     network with no route out. A job reaches only forgejo-ci, this runner (cache), and the egress
+#     proxy, which refuses private and tailnet addresses (egress/squid.conf).
+#   - Jobs get no Docker socket, no host mounts, and no privileged mode (config.yml), and a memory,
+#     CPU, and process limit.
+# The runner itself is trusted: it has the Docker socket, which is root on this box.
+services:
+  forgejo-runner:
+    container_name: forgejo-runner
+    # Pinned to a major version: `manage.sh update` pulls minor and patch releases
+    image: data.forgejo.org/forgejo/runner:13
+    restart: unless-stopped
+    command: forgejo-runner daemon --config /config.yml
+    group_add:
+      - ${DOCKER_GID}
+    volumes:
+      - ./config.yml:/config.yml:ro
+      # .runner (the registration) and the cache
+      - ${DATA_PATH}/forgejo-runner:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - ci
+      # Out to GitHub, to fetch the actions that the workflows use
+      - egress
+    depends_on:
+      - forgejo-runner-egress
+
+  forgejo-runner-egress:
+    container_name: forgejo-runner-egress
+    build: ./egress
+    image: homielab/forgejo-runner-egress
+    restart: unless-stopped
+    networks:
+      - ci
+      - egress
+
+networks:
+  ci:
+    name: forgejo_ci
+    external: true
+  egress:
+    name: forgejo_runner_egress
+    ipam:
+      config:
+        - subnet: 172.30.2.0/24
