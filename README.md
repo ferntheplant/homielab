@@ -461,8 +461,9 @@ To reset the password, run `docker exec -it forgejo forgejo admin user change-pa
   title and description. The web merge form uses the template. The API merge does not.
 - Actions is on. See [Forgejo Actions](#forgejo-actions).
 - Wiki and projects are off on every repo (`DISABLED_REPO_UNITS`). They do not show in the repo menu or settings.
-- Not in the Glance services monitor: Glance cannot reach `forgejo_network`, and a container cannot reach Tailscale
-  Serve on this box. The Docker widget shows the container state.
+- Glance reads Forgejo through `forgejo-ci`, on the internal network `forgejo_glance` (made by the homie stack).
+  `forgejo-ci` removes the sign-in headers, so Glance signs in with `FORGEJO_TOKEN` only. Glance cannot reach
+  `forgejo_network`, and a container cannot reach Tailscale Serve on this box.
 
 ### GitHub mirrors
 
@@ -612,22 +613,39 @@ Glance is the server dashboard. Complex widgets have their own config file in `g
 Glance server to use my timezone, `glance.Dockerfile` extends the default image with tzdata. The homie stack builds it;
 `./stacks/manage.sh update` rebuilds it on a fresh base. Links in the config use `${TS_TAILNET}` from `.env.shared`.
 
+Layout: the left column has weather, Syncthing, backups, the dog, and xkcd. The center column has the quick
+links, the to-do list, the availability tabs, and the news tabs. The right sidebar has the services monitor, server
+stats, and Forgejo.
+
 Widgets:
 
-- [Karakeep](https://github.com/glanceapp/community-widgets/blob/main/widgets/karakeep-dashboard/README.md): calls `karakeep-web:3000` directly over `caddy_network`
-- Services: Glance's built-in `monitor` widget, checking each service over `caddy_network`
-- [Beszel](https://github.com/glanceapp/community-widgets/blob/main/widgets/beszel-metrics/README.md): calls the hub
-  over `caddy_network`, and links to `https://beszel.tail8cc0d3.ts.net` (`APP_URL`). The API token expires once a
-  year, see [Beszel](#beszel).
+- Quick links: one link for each Tailscale Service in `tailscale/services.json`, except `svc:lab` (this dashboard)
+- Services: Glance's built-in `monitor` widget, checking each service over `caddy_network` (Forgejo over
+  `forgejo_glance`)
+- [Beszel server stats](https://github.com/glanceapp/community-widgets/blob/main/widgets/beszel-server-stats/README.md):
+  calls the hub over `caddy_network` (`BESZEL_URL` is `host:port`, no scheme), and links to
+  `https://beszel.tail8cc0d3.ts.net` (`APP_URL`). The API token expires once a year, see [Beszel](#beszel).
   TODO: find a way to notify when the API token is expired
+- [Forgejo repos](https://github.com/glanceapp/community-widgets/blob/main/widgets/forgejo-repos/README.md): the
+  repos sorted by the last update, through `forgejo-ci` (see the Forgejo settings). `FORGEJO_TOKEN` is an access
+  token for `ferntheplant` with the `read:repository` scope only. To make a new one:
+
+  ```bash
+  ssh micro-homie docker exec forgejo forgejo admin user generate-access-token --username ferntheplant \
+    --token-name glance --scopes read:repository --raw
+  ```
+
+  Put it in the `homie` item in 1Password as `FORGEJO_TOKEN`, then run `./stacks/manage.sh start homie`.
 - [Syncthing](https://github.com/glanceapp/community-widgets/blob/main/widgets/syncthing/README.md): hard coded values swapped for env variables
 - [Backrest](https://github.com/not-first/restic-glance-extension): for a remote repo you only need the env variables.
   With no snapshots the widget shows weird errors, so make sure at least one snapshot exists
 - lil-homie agents: reads `launchctl-agent-monitor.py` on the Mac at `https://${LIL_HOMIE_HOST}:8765/status`.
   Services are listed at the top of the script; an entry with a `url` is checked over HTTP instead of `launchctl`
-- [gcal](https://github.com/AWildLeon/Glance-iCal-Events): uses `parseTimeLocal` for local timestamps
 - [AQI](https://github.com/glanceapp/community-widgets/blob/main/widgets/air-quality/README.md) and
   [Weather](https://github.com/glanceapp/community-widgets/blob/main/widgets/weather-seven-day/README.md): default instructions
+- [xkcd](https://github.com/glanceapp/community-widgets/blob/main/widgets/xkcd-widget/README.md): the latest comic,
+  with its alt text on hover
+- Built-in: `to-do` (the tasks stay in each browser's local storage), `hacker-news`, and `lobsters`
 
 ## Beszel
 
@@ -655,9 +673,9 @@ password and sets it on the PocketBase superuser and on the Beszel user (same em
 ~/homielab/scripts/beszel-reset-password.sh
 ```
 
-The Glance Metrics widget reads the hub API with `BESZEL_API_TOKEN`. A normal login token expires after 7 days, so
+The Glance Server Stats widget reads the hub API with `BESZEL_API_TOKEN`. A normal login token expires after 7 days, so
 the widget uses a token that the superuser issues for one year. The current token expires on 2027-11-07. When the
-widget shows "No systems found", make a new token:
+Server Stats widget is empty, make a new token:
 
 1. On micro-homie, run `~/homielab/scripts/beszel-glance-token.sh`. It asks for the superuser password and writes
    the token to `~/.config/homielab/beszel-api-token`.

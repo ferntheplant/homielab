@@ -77,8 +77,6 @@ services:
       - AQI_TOKEN=${AQI_TOKEN}
       - BESZEL_URL=${BESZEL_URL}
       - BESZEL_API_TOKEN=${BESZEL_API_TOKEN}
-      - CALENDAR_URL=${CALENDAR_URL}
-      - KARAKEEP_API_KEY=${KARAKEEP_API_KEY}
       - TS_TAILNET=${TS_TAILNET}
       - LIL_HOMIE_HOST=${LIL_HOMIE_HOST}
       - LAT=${LAT}
@@ -87,6 +85,7 @@ services:
       - SYNCTHING_URL=${SYNCTHING_URL}
       - SYNCTHING_API_KEY=${SYNCTHING_API_KEY}
       - SYNCTHING_FOLDER_1_ID=${SYNCTHING_FOLDER_1_ID}
+      - FORGEJO_TOKEN=${FORGEJO_TOKEN}
     volumes:
       - ../../glance-config:/app/config
     depends_on:
@@ -96,15 +95,8 @@ services:
     networks:
       - caddy_network
       - socket_proxy
-
-  glances-ical:
-    container_name: glances-ical
-    image: ghcr.io/awildleon/glance-ical-events:latest
-    restart: unless-stopped
-    environment:
-      - TZ=${TZ}
-    networks:
-      - caddy_network
+      # Forgejo through forgejo-ci, for the Forgejo widget and the services monitor
+      - forgejo_glance
 
   syncthing:
     image: syncthing/syncthing
@@ -171,4 +163,9 @@ networks:
     name: caddy_network
     external: true
   socket_proxy:
+    internal: true
+  # Glance and forgejo-ci only (forgejo-ci removes the sign-in headers). This stack makes it, because
+  # manage.sh starts homie before forgejo; the forgejo stack joins it as external.
+  forgejo_glance:
+    name: forgejo_glance
     internal: true

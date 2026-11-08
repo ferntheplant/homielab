@@ -16,9 +16,6 @@
       icon: sh:dozzle
     beszel:
       icon: sh:beszel
-    glances-ical:
-      name: glance-gcal
-      icon: sh:google-calendar
     syncthing:
       icon: sh:syncthing
     backrest:

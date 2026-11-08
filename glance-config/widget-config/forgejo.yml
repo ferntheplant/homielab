@@ -1,0 +1,37 @@
+# Based on https://github.com/glanceapp/community-widgets/blob/main/widgets/forgejo-repos/README.md
+# Glance reaches Forgejo through forgejo-ci on forgejo_glance (stacks/forgejo/docker-compose.yml).
+# FORGEJO_TOKEN is an access token with the read:repository scope (README "Glance").
+- type: custom-api
+  title: Forgejo
+  title-url: https://forgejo.${TS_TAILNET}
+  cache: 5m
+  url: http://forgejo-ci/api/v1/repos/search
+  parameters:
+    sort: updated
+    order: desc
+    limit: 8
+  headers:
+    Authorization: token ${FORGEJO_TOKEN}
+    Accept: application/json
+  template: |
+    {{ if ne .Response.StatusCode 200 }}
+      <p class="color-negative">Error: {{ .Response.Status }}</p>
+    {{ else }}
+      {{ $repos := .JSON.Array "data" }}
+      {{ if eq (len $repos) 0 }}
+        <p class="color-subdue">No repositories found</p>
+      {{ else }}
+        <ul class="list list-gap-10 collapsible-container" data-collapse-after="5">
+          {{ range $repos }}
+          <li>
+            <a class="size-h4 color-highlight block text-truncate" href="{{ .String "html_url" | safeURL }}" target="_blank" rel="noreferrer">{{ .String "full_name" }}</a>
+            <ul class="list-horizontal-text size-h6 color-subdue">
+              <li {{ .String "updated_at" | parseTime "rfc3339" | toRelativeTime }}></li>
+              {{ if .Bool "private" }}<li>private</li>{{ end }}
+              {{ if .Bool "mirror" }}<li>mirror</li>{{ end }}
+            </ul>
+          </li>
+          {{ end }}
+        </ul>
+      {{ end }}
+    {{ end }}

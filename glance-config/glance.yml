@@ -32,9 +32,15 @@ pages:
     columns:
       - size: full
         widgets:
-          - $include: widget-config/gcal.yml
-
           - $include: widget-config/weather.yml
+
+          - $include: widget-config/syncthing.yml
+
+          - type: extension
+            title: Backups
+            url: http://restic-glance-extension:8675/backups
+            cache: 1s
+            allow-potentially-dangerous-html: true
 
           - type: custom-api
             height: 300px
@@ -44,39 +50,26 @@ pages:
             template: |
               <img src="{{ .JSON.String "message" }}"></img>
 
+          # https://github.com/glanceapp/community-widgets/blob/main/widgets/xkcd-widget/README.md
+          - type: custom-api
+            title: xkcd
+            title-url: https://xkcd.com
+            cache: 2m
+            url: https://xkcd.com/info.0.json
+            template: |
+              <p class="color-highlight">{{ .JSON.String "title" }}</p>
+              <img src="{{ .JSON.String "img" }}" alt="{{ .JSON.String "alt" }}" title="{{ .JSON.String "alt" }}" class="margin-top-5"></img>
+
       - size: full
         widgets:
           - $include: widget-config/quick-links.yml
 
-          - $include: widget-config/karakeep.yml
+          # Tasks stay in the browser's local storage, so each browser has its own list
+          - type: to-do
 
           - type: group
             title: Availability
             widgets:
-              - type: monitor
-                cache: 1m
-                title: Services
-                sites:
-                  - title: karakeep
-                    url: https://karakeep.${TS_TAILNET}
-                    check-url: http://karakeep-web:3000/api/health
-                    icon: sh:karakeep
-                  - title: backrest
-                    url: https://backrest.${TS_TAILNET}
-                    check-url: http://backrest:9898
-                    icon: sh:backrest
-                  - title: syncthing
-                    url: https://syncthing.${TS_TAILNET}
-                    check-url: http://syncthing:8384/rest/noauth/health
-                    icon: sh:syncthing
-                  - title: beszel
-                    url: https://beszel.${TS_TAILNET}
-                    check-url: http://beszel:8090/api/health
-                    icon: sh:beszel
-                  - title: dozzle
-                    url: https://logs.${TS_TAILNET}
-                    check-url: http://dozzle:8080/healthcheck
-                    icon: sh:dozzle
               - $include: widget-config/docker.yml
               - $include: widget-config/launchctl-agents.yml
               - type: monitor
@@ -87,14 +80,49 @@ pages:
                     url: https://fjorn.dev
                     icon: https://fjorn.dev/favicon.svg
 
+          - type: group
+            title: News
+            widgets:
+              - type: hacker-news
+                limit: 15
+                collapse-after: 5
+              - type: lobsters
+                sort-by: hot
+                limit: 15
+                collapse-after: 5
+
       - size: small
         widgets:
-          - $include: widget-config/syncthing.yml
-
-          - type: extension
-            title: Backups
-            url: http://restic-glance-extension:8675/backups
-            cache: 1s
-            allow-potentially-dangerous-html: true
+          - type: monitor
+            cache: 1m
+            title: Services
+            sites:
+              - title: karakeep
+                url: https://karakeep.${TS_TAILNET}
+                check-url: http://karakeep-web:3000/api/health
+                icon: sh:karakeep
+              - title: forgejo
+                url: https://forgejo.${TS_TAILNET}
+                # Through forgejo-ci on forgejo_glance (stacks/forgejo/docker-compose.yml)
+                check-url: http://forgejo-ci/api/healthz
+                icon: sh:forgejo
+              - title: backrest
+                url: https://backrest.${TS_TAILNET}
+                check-url: http://backrest:9898
+                icon: sh:backrest
+              - title: syncthing
+                url: https://syncthing.${TS_TAILNET}
+                check-url: http://syncthing:8384/rest/noauth/health
+                icon: sh:syncthing
+              - title: beszel
+                url: https://beszel.${TS_TAILNET}
+                check-url: http://beszel:8090/api/health
+                icon: sh:beszel
+              - title: dozzle
+                url: https://logs.${TS_TAILNET}
+                check-url: http://dozzle:8080/healthcheck
+                icon: sh:dozzle
 
           - $include: widget-config/beszel.yml
+
+          - $include: widget-config/forgejo.yml

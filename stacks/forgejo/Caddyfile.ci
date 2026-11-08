@@ -4,6 +4,9 @@
 # It removes any X-WEBAUTH-* header from the client, because Forgejo trusts X-WEBAUTH-USER from any
 # sender (see Caddyfile). Job containers run untrusted code, so they must not reach forgejo:3000 or
 # forgejo-proxy directly: they are on forgejo_ci only, and only this proxy joins both networks.
+#
+# Glance reaches Forgejo here too, on forgejo_glance, for the Forgejo widget. It also signs in with a
+# token only.
 {
 	admin off
 	auto_https off

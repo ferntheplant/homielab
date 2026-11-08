@@ -1,5 +1,5 @@
 #!/bin/bash
-# Make a new Beszel API token for the Glance Metrics widget (BESZEL_API_TOKEN). Run on micro-homie
+# Make a new Beszel API token for the Glance Server Stats widget (BESZEL_API_TOKEN). Run on micro-homie
 # with the homie stack up:
 #
 #   ~/homielab/scripts/beszel-glance-token.sh [email] [days]     (default: me@fjorn.dev, 365)

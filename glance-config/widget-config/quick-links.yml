@@ -1,7 +1,8 @@
+# One link for each Tailscale Service in tailscale/services.json, except svc:lab (this dashboard)
 - type: bookmarks
   title: Quick Links
   groups:
-    - title: tailnet-only
+    - title: apps
       links:
       - title: karakeep
         url: https://karakeep.${TS_TAILNET}
@@ -9,6 +10,9 @@
       - title: forgejo
         url: https://forgejo.${TS_TAILNET}
         icon: sh:forgejo
+      - title: syncthing
+        url: https://syncthing.${TS_TAILNET}
+        icon: sh:syncthing
 
     - title: management
       links:
@@ -21,4 +25,3 @@
       - title: metrics
         url: https://beszel.${TS_TAILNET}
         icon: sh:beszel
-
