@@ -1,27 +1,30 @@
 server:
   assets-path: /app/config/assets
 theme:
+  # Rose Pine Moon (base, iris, foam, love)
   light: false
-  background-color: 232 23 18
+  background-color: 246 24 17
   contrast-multiplier: 1.2
-  primary-color: 220 83 75
-  positive-color: 105 48 72
-  negative-color: 351 74 73
+  primary-color: 267 57 78
+  positive-color: 189 43 73
+  negative-color: 343 76 68
   presets:
     default-dark:
+      # Rose Pine Moon
       light: false
-      background-color: 232 23 18
+      background-color: 246 24 17
       contrast-multiplier: 1.2
-      primary-color: 220 83 75
-      positive-color: 105 48 72
-      negative-color: 351 74 73
+      primary-color: 267 57 78
+      positive-color: 189 43 73
+      negative-color: 343 76 68
     default-light:
+      # Rose Pine Dawn
       light: true
-      background-color: 220 23 95
+      background-color: 32 57 95
       contrast-multiplier: 1.0
-      primary-color: 220 91 54
-      positive-color: 109 58 40
-      negative-color: 347 87 44
+      primary-color: 268 21 57
+      positive-color: 189 30 48
+      negative-color: 343 35 55
 pages:
   - name: Home
     # Optionally, if you only have a single page you can hide the desktop navigation for a cleaner look
