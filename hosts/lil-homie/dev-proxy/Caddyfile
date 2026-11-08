@@ -1,0 +1,40 @@
+# The dev proxy: https://<name>.dev.fjorn.dev reaches a dev server on lil-homie, from the tailnet only.
+# See README.md here.
+#
+#   tailnet :443 --(Tailscale Serve, TCP)--> this Caddy on 127.0.0.1:8443 (TLS) --> portless or a port
+#
+# Caddy sends a `.localhost` Host, so dev servers that accept only localhost names (Vite, Astro, and others) need
+# no setting. X-Forwarded-Host keeps the real name, and Caddy rewrites `localhost` redirects back to it.
+{
+	https_port 8443
+	# Only Tailscale Serve reaches this Caddy, on 443, so there is no port 80 to redirect from.
+	auto_https disable_redirects
+	storage file_system {$HOME}/.local/share/caddy-dev-proxy
+}
+
+*.dev.fjorn.dev {
+	bind 127.0.0.1
+	tls {
+		# A Let's Encrypt wildcard certificate through the DNS challenge. The token is in
+		# ~/.config/homielab/cloudflare-dns.env (caddy.sh loads it).
+		dns cloudflare {env.CF_API_TOKEN}
+	}
+
+	# 4321.dev.fjorn.dev -> whatever listens on localhost:4321
+	@port header_regexp p Host ^(\d+)\.dev\.fjorn\.dev(:\d+)?$
+	handle @port {
+		reverse_proxy 127.0.0.1:{re.p.1} {
+			header_up Host localhost:{re.p.1}
+			header_down Location ^https?://(localhost|127\.0\.0\.1)(:\d+)? https://{http.request.host}
+		}
+	}
+
+	# myapp.dev.fjorn.dev -> the portless route myapp.localhost (`portless myapp pnpm dev`)
+	@named header_regexp n Host ^([^:]+)\.dev\.fjorn\.dev(:\d+)?$
+	handle @named {
+		reverse_proxy 127.0.0.1:1355 {
+			header_up Host {re.n.1}.localhost
+			header_down Location ^https?://[^/]+\.localhost(:\d+)? https://{http.request.host}
+		}
+	}
+}

@@ -682,6 +682,8 @@ Files in `hosts/lil-homie/`. The Mac keeps:
   database, so it cannot run in a container or on Linux
 - **Beszel agent** (`dev.fjorn.beszel-agent`, `beszel-agent.sh` loads `~/.config/beszel/beszel-agent.env`)
 - **Status server** (`dev.fjorn.launchctl-agent-monitor`) for the dashboard's lil-homie agents widget
+- **Dev proxy** (`dev.fjorn.dev-proxy-caddy`, `dev.fjorn.portless`): any dev server on the Mac at
+  `https://<name>.dev.fjorn.dev`, tailnet only. See [`hosts/lil-homie/dev-proxy/README.md`](hosts/lil-homie/dev-proxy/README.md)
 - **Tailscale** (`dev.fjorn.tailscaled` LaunchDaemon)
 
 Tailscale Serve on the Mac publishes these ports to the tailnet. Apply them once (Serve remembers them):
@@ -690,6 +692,7 @@ Tailscale Serve on the Mac publishes these ports to the tailnet. Apply them once
 tailscale serve --bg --tcp=8080 tcp://127.0.0.1:8080      # llama-server
 tailscale serve --bg --tcp=8081 tcp://127.0.0.1:8081      # embeddings proxy
 tailscale serve --bg --https=8765 http://127.0.0.1:8765   # status server
+tailscale serve --bg --tcp=443 tcp://127.0.0.1:8443       # dev proxy (Caddy)
 ```
 
 The old Ollama forward (`--tcp=11434`) stays until the Ollama rollback window is over.
