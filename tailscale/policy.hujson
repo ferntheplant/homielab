@@ -116,7 +116,7 @@
 	// Test access rules every time they're saved.
 	"tests": [
 		{
-			"src":    "ferntheplant@github",
+			"src": "ferntheplant@github",
 			"accept": [
 				"svc:lab:443",
 				"svc:karakeep:443",
