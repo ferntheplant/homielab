@@ -1,0 +1,23 @@
+{
+  "//": "Tailscale Services and device tags. scripts/tailscale-apply.py applies the definitions and tags through the API; its `serve` command applies the endpoints on micro-homie. Each Service also needs a grant and an autoApprovers entry in policy.hujson. See README \"Tailscale\".",
+  "devices": {
+    "micro-homie": ["tag:micro-homie"]
+  },
+  "services": {
+    "svc:lab": {
+      "comment": "Caddy: Glance dashboard, /logs, /beszel, /syncthing, /backrest",
+      "endpoints": { "https:443": "http://127.0.0.1:8080" }
+    },
+    "svc:karakeep": {
+      "comment": "Karakeep. It needs its own origin for the app and the browser extension.",
+      "endpoints": { "https:443": "http://127.0.0.1:3000" }
+    },
+    "svc:forgejo": {
+      "comment": "Forgejo web through its sign-in proxy, and git over SSH",
+      "endpoints": {
+        "https:443": "http://127.0.0.1:3001",
+        "tcp:22": "tcp://127.0.0.1:2222"
+      }
+    }
+  }
+}

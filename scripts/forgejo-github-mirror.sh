@@ -14,12 +14,15 @@
 #   8. runs the first sync and compares the refs
 #
 # The Forgejo repo must be public: that marks it as mirrored. The script makes a short-lived Forgejo API token
-# and deletes it at exit through the web session, which Tailscale Serve signs in on this box.
+# and deletes it at exit through the web UI. It goes straight to the sign-in proxy on 127.0.0.1 and sends the
+# Tailscale-User-Login header itself, which the proxy accepts from a process on this box (stacks/forgejo/Caddyfile).
+# So it does not depend on the box's own tailnet identity, which a tagged box does not have.
 
 set -euo pipefail
 
 OWNER=ferntheplant
-FORGEJO=https://micro-homie.tail8cc0d3.ts.net:3001
+FORGEJO=http://127.0.0.1:3001
+TS_LOGIN=$(sed -n 's/^TS_LOGIN=//p' "$(dirname "$0")/../.env.shared")
 GITLEAKS_IMAGE=ghcr.io/gitleaks/gitleaks:v8.30.1
 
 repo=${1:?usage: $0 <repo>}
@@ -28,14 +31,17 @@ fj_git() { docker exec forgejo git -C "$bare" "$@"; }
 log() { echo "== $*"; }
 die() { echo "ABORT: $*" >&2; exit 1; }
 
+[[ -n $TS_LOGIN ]] || die "no TS_LOGIN in .env.shared"
+
 # Short-lived API token. Reverse proxy authentication does not cover the API.
 token_name="github-mirror-$(date +%s)"
 token=$(docker exec forgejo forgejo admin user generate-access-token -u "$OWNER" -t "$token_name" \
     --scopes write:repository,read:user --raw 2>/dev/null | tail -1)
 [[ ${#token} -ge 40 ]] || die "could not make a Forgejo API token"
+web() { curl -fsS -H "Tailscale-User-Login: $TS_LOGIN" "$@"; }
 delete_token() {
     local id
-    id=$(curl -fsS "$FORGEJO/user/settings/applications" | python3 -c '
+    id=$(web "$FORGEJO/user/settings/applications" | python3 -c '
 import re, sys
 page = sys.stdin.read()
 for name, token_id in re.findall(r"flex-item-title[^>]*>\s*([^<]+?)\s*<.*?tokens/delete\" data-id=\"(\d+)\"", page, re.S):
@@ -43,10 +49,10 @@ for name, token_id in re.findall(r"flex-item-title[^>]*>\s*([^<]+?)\s*<.*?tokens
         print(token_id)
 ' "$token_name")
     if [[ -n $id ]]; then
-        curl -fsS -o /dev/null -H "Origin: $FORGEJO" -H 'Sec-Fetch-Site: same-origin' -d "id=$id" \
+        web -o /dev/null -H "Origin: $FORGEJO" -H 'Sec-Fetch-Site: same-origin' -d "id=$id" \
             "$FORGEJO/user/settings/applications/tokens/delete" || true
     fi
-    if curl -fsS "$FORGEJO/user/settings/applications" | grep -q "$token_name"; then
+    if web "$FORGEJO/user/settings/applications" | grep -q "$token_name"; then
         echo "WARNING: delete the Forgejo token $token_name by hand (Settings > Applications)" >&2
     fi
 }

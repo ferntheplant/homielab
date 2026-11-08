@@ -21,6 +21,7 @@ scripts/                       snapshot, classifier, GitHub mirror, and micro-ho
 stacks/<name>/                 one docker compose project per stack (+ .env.tpl: 1Password refs)
 stacks/manage.sh               start/stop/update everything
 systemd/                       user timers for micro-homie (snapshot, update, classifier)
+tailscale/                     tailnet policy, Services, and device tags (see Tailnet config in code)
 hosts/lil-homie/               launchd agents and scripts for the Mac
 hosts/micro-homie/storage/     btrbk config and scrub timer for the 8 TB drive (see Storage drive)
 data/                          all service data ($DATA_PATH, gitignored)
@@ -215,12 +216,46 @@ All access is via Tailscale. The server is `micro-homie.tail8cc0d3.ts.net`. Serv
 `.env.shared` holds the tailnet names (`TS_HOST`, `LIL_HOMIE_HOST`). The compose files and the Glance config read
 them, so a rename is a one-line change.
 
+### Tailscale Services
+
+Each service also has its own tailnet name, a [Tailscale Service](https://tailscale.com/docs/features/tailscale-services)
+with its own HTTPS certificate. micro-homie hosts them all:
+
+- `https://lab.tail8cc0d3.ts.net/` → `127.0.0.1:8080` (Caddy: dashboard and its subpaths)
+- `https://karakeep.tail8cc0d3.ts.net/` → `127.0.0.1:3000`
+- `https://forgejo.tail8cc0d3.ts.net/` → `127.0.0.1:3001`, and `forgejo.tail8cc0d3.ts.net:22` (TCP) → `127.0.0.1:2222`
+
+The ports above on `micro-homie.tail8cc0d3.ts.net` still work while the links and Forgejo's `ROOT_URL` move to these
+names.
+
+A Service host must be a tagged device, so micro-homie is `tag:micro-homie` and has no user identity.
+
+### Tailnet config in code
+
+Do not change the tailnet in the admin console. These files are the source:
+
+- `tailscale/policy.hujson`: the whole tailnet policy (grants, tags, `autoApprovers`, tests)
+- `tailscale/services.json`: the Service definitions and their endpoints on micro-homie, and the device tags
+
+A new Service needs an entry in `services.json`, plus a grant and an `autoApprovers` entry in `policy.hujson`.
+
+```bash
+python3 -I scripts/tailscale-apply.py            # plan: validate the policy, show the diff, change nothing
+python3 -I scripts/tailscale-apply.py --apply    # apply the policy, then the Services, then the device tags
+./stacks/manage.sh serve                         # on micro-homie: serve the endpoints (runs `tailscale-apply.py serve`)
+```
+
+The API commands use the OAuth client in the 1Password item `homielab/Tailscale`, with the scopes `policy_file`,
+`services`, and `devices:core`. `op` reads it with the service account token, as `manage.sh` does. The
+Tailscale-hosted policy is replaced at each apply, so an edit in the console is lost.
+
 ### Tailnet guard
 
-micro-homie is a device that you own, so its traffic on the tailnet carries your identity. Tailscale Serve on
-another device signs that traffic in as you: Rex on `lil-homie-rex`, for example, which gives a shell on the Mac.
-Container traffic leaves through micro-homie too, and some containers run code that is not fully trusted.
-`karakeep-chrome`, for example, loads every page that you bookmark.
+micro-homie is now tagged (`tag:micro-homie`), so its traffic on the tailnet no longer carries your identity.
+Before the tag, Tailscale Serve on another device signed that traffic in as you: Rex on `lil-homie-rex`, for
+example, which gives a shell on the Mac. Container traffic leaves through micro-homie too, and some containers run
+code that is not fully trusted. `karakeep-chrome`, for example, loads every page that you bookmark. The guard below
+keeps containers off the tailnet, apart from a few exceptions.
 
 The tailnet guard is an nftables table (`hosts/micro-homie/tailnet-guard/tailnet-guard.nft`). It drops container
 traffic to the tailnet, except:
@@ -232,13 +267,11 @@ traffic to the tailnet, except:
 It also drops container traffic to micro-homie's own tailnet addresses. The CI jobs have their own, stricter sandbox
 (see [Forgejo Actions](#forgejo-actions)).
 
-The guard does not apply to host processes or to a container with `network_mode: host` (`beszel-agent`). Their
-traffic still carries your identity. The fix for those is to tag micro-homie in the Tailscale admin console, so that
-the box has no user identity. That needs these changes first:
-
-- ACL rules that let the tag reach lil-homie (8080, 8081, 8765) and the Syncthing peers (22000)
-- A new way for `scripts/forgejo-github-mirror.sh` to delete its token: it signs in to the Forgejo web UI through
-  Tailscale Serve as this box, which works only while the box is yours
+The guard does not apply to host processes or to a container with `network_mode: host` (`beszel-agent`). The tag
+covers those: their traffic carries `tag:micro-homie`, not your identity. The policy still allows all traffic, so the
+tag reaches lil-homie (8080, 8081, 8765) and the Syncthing peers (22000). If the policy gets narrower, keep grants for
+those. `scripts/forgejo-github-mirror.sh` signs in to Forgejo on `127.0.0.1` with the header, so it does not need the
+box's identity.
 
 The rules name lil-homie by its tailnet IP (`define lil_homie`). If lil-homie gets a new IP (for example, after it
 is removed and added to the tailnet again), change the IP and run the script again.
