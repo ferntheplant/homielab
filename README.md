@@ -224,15 +224,8 @@ the `Tailscale-User-Login` header for a request from your own devices, so Forgej
 `.env.shared` holds the tailnet names (`TS_TAILNET`, `TS_HOST`, `LIL_HOMIE_HOST`). The compose files and the Glance
 config read them, so a rename is a one-line change.
 
-### The old ports
-
-Serve on the box's own name still publishes the old addresses (`TAILSCALE_SERVE` at the top of `manage.sh`), for
-clients that are not moved yet, like the Karakeep app:
-
-- `https://micro-homie.tail8cc0d3.ts.net/` → `127.0.0.1:8080` (the dashboard only; the subpaths are gone)
-- `https://micro-homie.tail8cc0d3.ts.net:3003/` → `127.0.0.1:3000` (Karakeep)
-- `https://micro-homie.tail8cc0d3.ts.net:3001/` → `127.0.0.1:3001` (Forgejo)
-- `micro-homie.tail8cc0d3.ts.net:2222` (TCP) → `127.0.0.1:2222` (Forgejo git over SSH)
+The box's own name, `micro-homie.tail8cc0d3.ts.net`, serves only Rex on port 7297 (see [Rex](#rex)). The ports that
+it used to serve (443, 3001, 3003, and 2222) are off.
 
 `setup-micro-homie.sh` makes `fjorn` the Tailscale operator, so `tailscale serve` works without sudo. If
 `tailscale serve status` shows `No serve config`, run it once interactively to get the one-time consent flow.
@@ -308,7 +301,7 @@ Docker starts. The table is separate from Docker's and Tailscale's rules, so the
 
 Rex runs on micro-homie as the **login server** (`rex-login-server.service`), not the package's default shared
 server. It identifies callers by their Tailscale login and runs their terminals as `fjorn`. Tailscale Serve publishes
-it on port 7297, because 443 is the dashboard. `scripts/setup-rex-login-server.sh` (run with sudo) sets this up.
+it on port 7297. `scripts/setup-rex-login-server.sh` (run with sudo) sets this up.
 
 In Rex for Mac, choose **Add Remote Host…** and enter the full address with the port. A bare hostname makes Rex try
 443 first:
@@ -402,7 +395,7 @@ journalctl --user -u karakeep-classify.service              # log
 - git: `git@forgejo.tail8cc0d3.ts.net:ferntheplant/<repo>.git` (SSH), or `https://forgejo.tail8cc0d3.ts.net/ferntheplant/<repo>.git`
   (HTTPS, signed in by your Tailscale login)
 
-The SSH host key is the same as on the old `micro-homie.tail8cc0d3.ts.net:2222`.
+The SSH server is Forgejo's own, on `127.0.0.1:2222`. The Service forwards port 22 to it.
 
 Push to create is on for my user: a push to a `ferntheplant/<repo>` that does not exist creates it as a private repo.
 A push from a deploy key cannot create a repo, because it needs a key on the user account.

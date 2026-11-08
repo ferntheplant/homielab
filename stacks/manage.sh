@@ -9,17 +9,9 @@ REPO_DIR="$(dirname "${SCRIPT_DIR}")"
 STACKS=("caddy" "beeper" "homie" "karakeep" "forgejo" "forgejo-runner")
 SHARED_ENV_FILE="${REPO_DIR}/.env.shared"
 
-# Tailscale Serve on the box's own name: tailnet HTTPS port -> local target. Every target binds to 127.0.0.1 only.
-# The Tailscale Services (forgejo.<tailnet>.ts.net and others) are in tailscale/services.json.
-TAILSCALE_SERVE=(
-    "443=http://127.0.0.1:8080"  # caddy (dashboard + subpaths)
-    "3003=http://127.0.0.1:3000" # karakeep (needs its own origin for the mobile app/extension)
-    "3001=http://127.0.0.1:3001" # forgejo web, through its sign-in proxy
-)
-# Tailscale Serve TCP forwards: tailnet port -> local target
-TAILSCALE_SERVE_TCP=(
-    "2222=tcp://127.0.0.1:2222" # forgejo git over SSH
-)
+# Tailscale Serve publishes each app as a Tailscale Service (<name>.<tailnet>.ts.net), defined in
+# tailscale/services.json. Every target binds to 127.0.0.1 only. The box's own name serves only Rex (port 7297,
+# scripts/setup-rex-login-server.sh).
 
 # Colors for output
 RED='\033[0;31m'
@@ -54,25 +46,11 @@ compose_cmd() {
     fi
 }
 
-# tailscale serve can block on an interactive prompt if Serve is not enabled for the tailnet
-run_with_timeout() {
-    local seconds=$1
-    shift
-    timeout "$seconds" "$@" </dev/null >/dev/null 2>&1 || true
-}
-
 ensure_tailscale_serve() {
     if ! command -v tailscale >/dev/null 2>&1; then
         echo -e "${YELLOW}tailscale not found; skipping serve setup.${NC}"
         return 0
     fi
-    echo -e "${YELLOW}→ tailscale serve${NC}"
-    for entry in "${TAILSCALE_SERVE[@]}"; do
-        run_with_timeout 5 tailscale serve --bg --https="${entry%%=*}" "${entry#*=}"
-    done
-    for entry in "${TAILSCALE_SERVE_TCP[@]}"; do
-        run_with_timeout 5 tailscale serve --bg --tcp="${entry%%=*}" "${entry#*=}"
-    done
     echo -e "${YELLOW}→ tailscale serve (Services)${NC}"
     python3 -I "${REPO_DIR}/scripts/tailscale-apply.py" serve ||
         echo -e "${RED}Tailscale Services serve failed. The box must be tagged (scripts/tailscale-apply.py --apply).${NC}"

@@ -168,7 +168,8 @@ def serve():
             proto, port = endpoint.split(":", 1)
             cmd = ["tailscale", "serve", f"--service={name}", f"--{proto}={port}", target]
             print("+ " + " ".join(cmd))
-            subprocess.run(cmd, check=True, timeout=30)
+            # No stdin: tailscale serve can wait on an interactive prompt if Serve is not enabled for the tailnet.
+            subprocess.run(cmd, check=True, timeout=30, stdin=subprocess.DEVNULL)
 
 
 def main():
