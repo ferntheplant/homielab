@@ -25,6 +25,7 @@ tailscale/                     tailnet policy, Services, and device tags (see Ta
 hosts/lil-homie/               launchd agents and scripts for the Mac
 hosts/micro-homie/storage/     btrbk config and scrub timer for the 8 TB drive (see Storage drive)
 data/                          all service data ($DATA_PATH, gitignored)
+.agents/skills/homielab/       the homielab skill for agents (see Agents)
 ```
 
 ## General
@@ -321,6 +322,13 @@ The accounts file is `/etc/rex/accounts.jsonc` and needs `"version": 1`. Its ser
 micro-homie runs no agents: its dotfiles profile is `infra`, which has no agent config. Agents run on lil-homie or
 a laptop, and use Rex to open terminals here. Those terminals run as `fjorn`, who is in the `docker` group, so an
 agent in one has the same access to the services as you do.
+
+## Agents
+
+`.agents/skills/homielab/` is a skill for coding agents: which machine is which, Rex terminals on micro-homie, the
+dev proxy, Forgejo, and Kata. It points to the sections of this README, so keep the two in step. The dotfiles link it
+into each agent's skills on every machine that has this checkout at `~/homielab` (`scripts/link-skills.sh` there), so
+a `git pull` here updates it everywhere.
 
 ## SSH
 
