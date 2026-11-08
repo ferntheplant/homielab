@@ -256,6 +256,10 @@ The API commands use the OAuth client in the 1Password item `homielab/Tailscale`
 `services`, and `devices:core`. `op` reads it with the service account token, as `manage.sh` does. The
 Tailscale-hosted policy is replaced at each apply, so an edit in the console is lost.
 
+Run `--apply` before `serve` for a new Service. If the box serves a Service before it exists, the tailnet does not
+approve the box as its host later, and the name does not connect. To fix it, on micro-homie run
+`tailscale serve drain svc:<name>`, then `tailscale serve advertise svc:<name>`.
+
 ### Tailnet guard
 
 micro-homie is now tagged (`tag:micro-homie`), so its traffic on the tailnet no longer carries your identity.
@@ -569,6 +573,9 @@ git remote set-url origin git@forgejo.tail8cc0d3.ts.net:ferntheplant/homielab.gi
 ```
 
 On a new box, make a new key and add it in Forgejo: homielab > Settings > Deploy keys, with write access.
+
+`~/dotfiles` on micro-homie works the same way, with `~/.ssh/dotfiles_forgejo`. That is a **read-only** deploy key on
+`dotfiles`. The tagged box cannot sign in over HTTPS, so every checkout on it needs a key.
 
 The deploy key is not a security limit on micro-homie. Two things give every process that runs as `fjorn` full
 access to Forgejo:
