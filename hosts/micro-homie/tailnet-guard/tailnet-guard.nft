@@ -33,7 +33,8 @@ table inet homielab_tailnet_guard {
 		# MagicDNS: tailnet names (lil-homie, *.ts.net) and the host's upstream DNS
 		ip daddr $quad100 meta l4proto { tcp, udp } th dport 53 accept
 		ip6 daddr $quad100_v6 meta l4proto { tcp, udp } th dport 53 accept
-		# karakeep -> llama-server (8080 chat, 8081 embeddings); Glance -> agent status (8765).
+		# karakeep -> llama-server (8080 chat, 8081 embeddings); kata -> embeddings (8081);
+		# Glance -> agent status (8765).
 		# Serve TCP forwards and a read-only status page: neither acts on the caller's identity.
 		ip daddr $lil_homie tcp dport { 8080, 8081, 8765 } accept
 		# Syncthing -> its peers. Syncthing authenticates devices by their own keys.

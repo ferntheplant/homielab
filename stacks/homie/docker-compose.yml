@@ -97,6 +97,8 @@ services:
       - socket_proxy
       # Forgejo through forgejo-ci, for the Forgejo widget and the services monitor
       - forgejo_glance
+      # Kata's health check through kata-gate, for the services monitor
+      - kata_glance
 
   syncthing:
     image: syncthing/syncthing
@@ -168,4 +170,9 @@ networks:
   # manage.sh starts homie before forgejo; the forgejo stack joins it as external.
   forgejo_glance:
     name: forgejo_glance
+    internal: true
+  # Glance and kata-gate only. kata-gate answers here with Kata's health check and nothing else.
+  # Made here for the same reason as forgejo_glance; the kata stack joins it as external.
+  kata_glance:
+    name: kata_glance
     internal: true

@@ -133,6 +133,7 @@ Stacks:
 - `karakeep`: bookmarker + meilisearch + headless chrome
 - `beeper`: bridge-manager containers for Discord, Signal, Facebook
 - `forgejo`: the git host + its sign-in proxy, on its own network (see [Forgejo](#forgejo))
+- `kata`: the Kata issue tracker for agents + its socket gate, on its own network (see [Kata](#kata))
 
 Two containers mount the Docker socket directly: `socket-proxy`, and `beszel-agent` for container stats. The agent
 uses the host network, so it cannot reach the proxy's internal network.
@@ -183,7 +184,8 @@ containers, and prunes old images. The unit stops the job after 2 hours, so a st
 the next week.
 
 Images with on-disk formats that need a manual migration stay pinned (`getmeili/meilisearch:v1.13.3`,
-`zenika/alpine-chrome:124`, the Chrome version Karakeep documents). Bump those by hand. Forgejo is pinned to a
+`zenika/alpine-chrome:124`, the Chrome version Karakeep documents, `ghcr.io/kenn-io/kata:0.22.0`). Bump those by
+hand. Forgejo is pinned to a
 major version (`17-rootless`), so the update gets its patch releases only. See [Forgejo](#forgejo).
 
 Debian packages (Docker, Tailscale, 1Password CLI) come from apt. `unattended-upgrades` installs Debian security
@@ -217,6 +219,8 @@ with its own HTTPS certificate. micro-homie hosts them all (`tailscale/services.
 - `https://backrest.tail8cc0d3.ts.net/` → `127.0.0.1:9898`
 - `https://logs.tail8cc0d3.ts.net/` → `127.0.0.1:8082` (Dozzle)
 - `https://beszel.tail8cc0d3.ts.net/` → `127.0.0.1:8090`
+- `https://kata.tail8cc0d3.ts.net/` → `127.0.0.1:7777` (Kata web UI)
+- `https://kata-api.tail8cc0d3.ts.net/` → `127.0.0.1:7778` (Kata API for agents, through `kata-gate`)
 
 A Service host must be a tagged device, so micro-homie is `tag:micro-homie` and has no user identity. Serve still adds
 the `Tailscale-User-Login` header for a request from your own devices, so Forgejo sign-in works (tested).
@@ -265,7 +269,8 @@ The tailnet guard is an nftables table (`hosts/micro-homie/tailnet-guard/tailnet
 traffic to the tailnet, except:
 
 - MagicDNS (`100.100.100.100`, port 53)
-- karakeep to lil-homie 8080 and 8081 (llama-server), and Glance to lil-homie 8765 (agent status)
+- karakeep to lil-homie 8080 and 8081 (llama-server), Kata to lil-homie 8081 (embeddings), and Glance to lil-homie
+  8765 (agent status). The rule does not name the source container, so each container can reach these 3 ports.
 - Syncthing to its peers on port 22000
 
 It also drops container traffic to micro-homie's own tailnet addresses. The CI jobs have their own, stricter sandbox
@@ -312,6 +317,10 @@ https://micro-homie.tail8cc0d3.ts.net:7297
 
 The accounts file is `/etc/rex/accounts.jsonc` and needs `"version": 1`. Its server log is
 `sudo journalctl -u rex-login-server`.
+
+micro-homie runs no agents: its dotfiles profile is `infra`, which has no agent config. Agents run on lil-homie or
+a laptop, and use Rex to open terminals here. Those terminals run as `fjorn`, who is in the `docker` group, so an
+agent in one has the same access to the services as you do.
 
 ## SSH
 
@@ -591,6 +600,83 @@ The image is `codeberg.org/forgejo/forgejo:17-rootless`. The weekly update pulls
 supported until 2027-01-28. Before that date, read the release notes for the next major version, change the tag, and
 run `./stacks/manage.sh update forgejo`. The update takes a snapshot first. The next long-term support version is 19
 (April 2027).
+
+## Kata
+
+[Kata](https://www.katatracker.com/docs/) is an issue tracker for coding agents. One daemon on micro-homie holds the
+to-do lists for agents on any device in the tailnet. There are no tokens: Tailscale is the boundary.
+
+- web UI: `https://kata.tail8cc0d3.ts.net/` (the actor is your Tailscale login)
+- API for agents: `https://kata-api.tail8cc0d3.ts.net/` (the actor is the agent's `KATA_AUTHOR`)
+
+Files are in `stacks/kata/`. Data is in `data/kata`: the SQLite database `kata.db`, the search index
+`kata.vectors.db`, and the JSONL backups in `backups/`. The config is `stacks/kata/config.toml`, mounted read-only
+at `/data/config.toml`.
+
+### Two listeners, two kinds of actor
+
+Kata takes the actor from a trusted proxy header or from the request, but not both on one listener. So it has two
+listeners:
+
+```text
+browser: svc:kata     -> 127.0.0.1:7777 -> kata 172.30.3.10:7777        actor = Tailscale-User-Login
+agents:  svc:kata-api -> 127.0.0.1:7778 -> kata-gate -> Unix socket     actor = KATA_AUTHOR
+Glance:  kata_glance  -> kata-gate:8080 -> Unix socket                  GET /api/v1/health only
+```
+
+- **Browser.** The UI listener is a trusted proxy listener (`[auth.proxy]` in `config.toml`). Tailscale Serve
+  removes any `Tailscale-User-Login` header that the client sends, and sets it for a request from a user's device.
+  Kata makes that login the actor and opens the UI without a token login. A write without the header gets
+  `400 actor_header_required`. A device with a tag gets no header, so it can read the UI but not write.
+- **Agents.** Kata trusts its Unix socket as the owner and takes the actor from the request. `kata-gate` (Caddy)
+  forwards `svc:kata-api` to the socket. It removes the forwarding headers, because Kata does not trust a request
+  with forwarding headers as local. The socket path has the hash of the database path, so the path in
+  `stacks/kata/Caddyfile` changes only if the database path changes.
+- **Glance.** `kata-gate` also joins `kata_glance` (made by the homie stack, like `forgejo_glance`). There it answers
+  the health check only, and its agent port refuses Glance with a 403.
+
+Every tailnet member can write anything through `svc:kata-api`, with any actor name. Any process on micro-homie can
+do the same on `127.0.0.1:7778`, or send the header on `127.0.0.1:7777`. The kata stack is not on `caddy_network`,
+so other containers cannot reach Kata.
+
+### Agents
+
+Point an agent at the API and give it a name:
+
+```bash
+export KATA_SERVER=https://kata-api.tail8cc0d3.ts.net
+export KATA_AUTHOR=claude-lil-homie     # the actor on each issue, comment, and close
+export KATA_TEAMMATE=reviewer           # optional: a sub-agent under the actor
+kata whoami
+```
+
+Do not point an agent at `kata.tail8cc0d3.ts.net`: there, the actor is your Tailscale login, not the agent. Agents
+do not run on micro-homie (see [Rex](#rex)), so no client uses `127.0.0.1:7778`.
+
+The dotfiles set up the clients: the `kata` CLI, `~/.kata/config.toml` with the daemon URL, each agent's actor, and
+the agent hooks (see the Kata section of the dotfiles README).
+
+### Semantic search
+
+Kata embeds each issue with `nomic-embed-text-v2-moe` on lil-homie (`LLM_EMBED_URL`, see
+[AI tagging](#ai-tagging-llama-server)), with the model card's `search_document: ` and `search_query: ` prefixes.
+Kata sends text in chunks of 2000 characters, and the embeddings proxy cuts each one to 512 tokens. `GET
+/api/v1/health` shows the `embeddings` state: `embedded`, `skipped`, `backlog`, and the time of the last success.
+What search does while lil-homie is off is not tested; check `backlog` after an outage.
+
+### Backups
+
+`scripts/snapshot-data.sh` stops Kata and copies `data/kata` each night, as for the other databases. Kata also writes
+a full JSONL export to `data/kata/backups/` at start and every 24 hours, and keeps 30 days. To restore an export, stop
+Kata, move `data/kata/kata.db*` away, then run `kata import --input <file>.jsonl --target /data/kata.db` in the
+image.
+
+### Updates
+
+The image is pinned (`ghcr.io/kenn-io/kata:0.22.0`), because Kata migrates its database at start and cannot go
+back. Read the [changelog](https://www.katatracker.com/docs/changelog/), change the tag, then run
+`./stacks/manage.sh update kata` (it takes a snapshot first). Update the daemon before the agents' `kata` CLI: an
+older daemon refuses some requests from a newer CLI.
 
 ## Beeper
 

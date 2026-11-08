@@ -1,0 +1,46 @@
+# Kata daemon config, mounted read-only at /data/config.toml (<KATA_HOME>/config.toml).
+# See README "Kata". The compose file sets the settings that come from .env.shared.
+#
+# Two listeners, two kinds of attribution, no tokens:
+#
+# - The daemon API is on its default Unix socket ($XDG_RUNTIME_DIR/kata/<db hash>/daemon.sock). Kata
+#   trusts a Unix socket as the owner, and takes the actor from the request (KATA_AUTHOR). kata-gate
+#   forwards svc:kata-api to it, so each agent keeps its own name.
+# - The browser UI is on its own TCP listener, svc:kata. Tailscale Serve adds Tailscale-User-Login,
+#   and Kata makes that login the actor (trusted proxy). The UI needs no token login.
+#
+# `listen` (top level) is not set: it takes TCP addresses only, and a TCP daemon listener would also
+# serve the browser, so the two attribution modes could not be on separate listeners.
+
+[web]
+# The container's fixed IP on kata_network (docker-compose.yml). A trusted proxy listener must be a
+# literal address, and a bind to 127.0.0.1 in the container cannot be published.
+listen = "172.30.3.10:7777"
+public_origin = "https://kata.tail8cc0d3.ts.net"
+
+[auth]
+# Kata refuses a browser listener that is not on loopback without this. Tailscale is the boundary.
+trust_private_network = true
+
+[auth.proxy]
+# Tailscale Serve removes any copy of this header that the client sends, and sets it for a request
+# from a user's device. A device with a tag gets no header, so it can read the UI but not write.
+trusted_actor_header = "Tailscale-User-Login"
+trusted_proxy_listeners = ["172.30.3.10:7777"]
+
+[search.embeddings]
+# base_url comes from LLM_EMBED_URL (KATA_SEARCH_EMBEDDINGS_BASE_URL in the compose file): the
+# embeddings proxy on lil-homie, which cuts each input to the model's 512 tokens. Kata sends issue
+# text in chunks of 2000 characters.
+model = "nomic-embed-text-v2-moe:latest"
+dims = 768
+# The model card's retrieval prefixes for nomic-embed-text-v2-moe. A change here makes Kata embed
+# every issue again.
+document_prefix = "search_document: "
+query_prefix = "search_query: "
+# Plain HTTP to lil-homie over the tailnet. Kata refuses plain HTTP to a non-loopback host without it.
+trust_private_network = true
+
+[backup]
+# A full JSONL export at start and every 24h, kept 30 days. Restore: kata import --input <file>.
+dir = "/data/backups"

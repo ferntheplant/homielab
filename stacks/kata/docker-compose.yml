@@ -1,0 +1,64 @@
+# Kata, the issue tracker for agents. See README "Kata".
+#
+#   browser: svc:kata     -> 127.0.0.1:7777 -> kata 172.30.3.10:7777 (actor: Tailscale-User-Login)
+#   agents:  svc:kata-api -> 127.0.0.1:7778 -> kata-gate -> Kata's Unix socket (actor: KATA_AUTHOR)
+#   Glance:  kata_glance  -> kata-gate:8080 (GET /api/v1/health only)
+#
+# Not on caddy_network: kata-gate gives full access to Kata, so no other container may reach it.
+services:
+  kata:
+    container_name: kata
+    # Pinned: Kata migrates its database at start, with no way back. Bump by hand after a snapshot
+    # (`manage.sh update kata` takes one). The image runs as uid 1000 (fjorn).
+    image: ghcr.io/kenn-io/kata:0.22.0
+    restart: unless-stopped
+    environment:
+      KATA_TELEMETRY_ENABLED: "off"
+      # The Unix socket goes in $XDG_RUNTIME_DIR/kata/<db hash>/, on the volume that kata-gate shares
+      XDG_RUNTIME_DIR: /run/kata
+      KATA_SEARCH_EMBEDDINGS_BASE_URL: ${LLM_EMBED_URL}/v1
+    volumes:
+      - ${DATA_PATH}/kata:/data
+      - ./config.toml:/data/config.toml:ro
+      - kata_run:/run/kata
+    ports:
+      - 127.0.0.1:7777:7777
+    networks:
+      kata_network:
+        ipv4_address: 172.30.3.10
+
+  kata-gate:
+    container_name: kata-gate
+    image: caddy:2
+    restart: unless-stopped
+    # The socket is 0600, owned by uid 1000
+    user: "1000:1000"
+    depends_on:
+      - kata
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - kata_run:/run/kata
+    ports:
+      - 127.0.0.1:7778:7778
+    networks:
+      - kata_network
+      - kata_glance
+
+volumes:
+  # The socket only. tmpfs, so a stale socket does not survive a reboot.
+  kata_run:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: uid=1000,gid=1000,mode=0700
+
+networks:
+  # Not internal: Kata reaches the embeddings proxy on lil-homie (allowed by the tailnet guard)
+  kata_network:
+    name: kata_network
+    ipam:
+      config:
+        - subnet: 172.30.3.0/24
+  kata_glance:
+    name: kata_glance
+    external: true

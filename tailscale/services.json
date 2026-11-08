@@ -34,6 +34,14 @@
     "svc:beszel": {
       "comment": "Beszel hub. The agents on lil-homie and gaming-homie connect to it here.",
       "endpoints": { "https:443": "http://127.0.0.1:8090" }
+    },
+    "svc:kata": {
+      "comment": "Kata web UI. The actor is your Tailscale login.",
+      "endpoints": { "https:443": "http://127.0.0.1:7777" }
+    },
+    "svc:kata-api": {
+      "comment": "Kata API for agents (KATA_SERVER). The actor is the agent's KATA_AUTHOR.",
+      "endpoints": { "https:443": "http://127.0.0.1:7778" }
     }
   }
 }

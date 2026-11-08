@@ -6,7 +6,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "${SCRIPT_DIR}")"
-STACKS=("caddy" "beeper" "homie" "karakeep" "forgejo" "forgejo-runner")
+STACKS=("caddy" "beeper" "homie" "karakeep" "forgejo" "forgejo-runner" "kata")
 SHARED_ENV_FILE="${REPO_DIR}/.env.shared"
 
 # Tailscale Serve publishes each app as a Tailscale Service (<name>.<tailnet>.ts.net), defined in

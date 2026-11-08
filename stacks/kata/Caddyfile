@@ -1,0 +1,47 @@
+# kata-gate: HTTP to Kata's Unix socket. See README "Kata".
+#
+# Kata trusts its Unix socket as the owner and takes the actor from the request, so each agent keeps
+# its own name (KATA_AUTHOR). Kata does not trust a request with forwarding headers as local, so this
+# proxy removes them; Caddy adds X-Forwarded-For, -Proto, and -Host, and Tailscale Serve sends them too.
+#
+# The socket path has the hash of the database path (/data/kata.db). It changes only if the database
+# path changes.
+{
+	admin off
+	auto_https off
+	persist_config off
+}
+
+# Agents: svc:kata-api -> 127.0.0.1:7778 -> here. Full access to Kata, without a token.
+:7778 {
+	# Only the published port (docker-proxy connects from kata_network). Glance is on kata_glance and
+	# gets only the health check below.
+	@not_published not remote_ip 172.30.3.0/24
+	respond @not_published 403
+
+	reverse_proxy unix//run/kata/kata/c1e34196a9db/daemon.sock {
+		header_up -Forwarded
+		header_up -X-Forwarded-For
+		header_up -X-Forwarded-Proto
+		header_up -X-Forwarded-Host
+		header_up -X-Real-IP
+		# The event stream
+		flush_interval -1
+	}
+}
+
+# Glance's services monitor, on kata_glance: the health check only.
+:8080 {
+	@health {
+		method GET
+		path /api/v1/health
+	}
+	handle @health {
+		reverse_proxy unix//run/kata/kata/c1e34196a9db/daemon.sock {
+			header_up -X-Forwarded-For
+			header_up -X-Forwarded-Proto
+			header_up -X-Forwarded-Host
+		}
+	}
+	respond 404
+}
