@@ -51,8 +51,8 @@ Caddy cannot listen on the tailnet IP itself: macOS lets only root bind port 443
 forwards the TCP connection instead, which also keeps the proxy off the LAN.
 
 The Cloudflare token needs **Zone → Zone → Read** and **Zone → DNS → Edit**, on `fjorn.dev` only. It is an
-account-owned token, in the 1Password item `homielab/Cloudflare DNS`, field `CLOUDFLARE_API_TOKEN`. Caddy uses it for the DNS challenge, and `dns.py` for the
-record.
+account-owned token, in the 1Password item `homielab/Cloudflare DNS`, field `CLOUDFLARE_API_TOKEN`. Caddy uses it
+for the DNS challenge, and `dns.py` for the record.
 
 ## Install
 
