@@ -116,7 +116,8 @@ def plan_services(api, services):
         if cur is None:
             changes.append(("create", name, body))
         elif cur.get("comment", "") != body["comment"] or sorted(cur.get("ports", [])) != body["ports"]:
-            changes.append(("update", name, body))
+            # An update must send the Service's IPv4 and IPv6 addresses, or the API refuses it.
+            changes.append(("update", name, {**body, "addrs": cur["addrs"]}))
     changes += [("delete", name, None) for name in live if name not in services]
     print("== services: " + ("no change" if not changes else f"{len(changes)} change(s)"))
     for action, name, body in changes:
