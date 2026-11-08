@@ -5,3 +5,4 @@ foo/
 **/*.env
 media/
 __pycache__/
+.kata.local.toml

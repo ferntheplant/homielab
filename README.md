@@ -614,6 +614,10 @@ run `./stacks/manage.sh update forgejo`. The update takes a snapshot first. The 
 [Kata](https://www.katatracker.com/docs/) is an issue tracker for coding agents. One daemon on micro-homie holds the
 to-do lists for agents on any device in the tailnet. There are no tokens: Tailscale is the boundary.
 
+This repo has its own Kata project: the committed `.kata.toml` at the repo root binds the checkout to it. Pending work
+on homielab goes there; the README keeps the how-it-works record, and Kata keeps the broken, pending, and
+half-remembered record.
+
 - web UI: `https://kata.tail8cc0d3.ts.net/` (the actor is your Tailscale login)
 - API for agents: `https://kata-api.tail8cc0d3.ts.net/` (the actor is the agent's `KATA_AUTHOR`)
 
@@ -718,7 +722,6 @@ Widgets:
 - [Beszel server stats](https://github.com/glanceapp/community-widgets/blob/main/widgets/beszel-server-stats/README.md):
   calls the hub over `caddy_network` (`BESZEL_URL` is `host:port`, no scheme), and links to
   `https://beszel.tail8cc0d3.ts.net` (`APP_URL`). The API token expires once a year, see [Beszel](#beszel).
-  TODO: find a way to notify when the API token is expired
 - [Forgejo repos](https://github.com/glanceapp/community-widgets/blob/main/widgets/forgejo-repos/README.md): the
   repos sorted by the last update, through `forgejo-ci` (see the Forgejo settings). `FORGEJO_TOKEN` is an access
   token for `ferntheplant` with the `read:repository` scope only. To make a new one:
@@ -839,9 +842,6 @@ echo "nameserver 100.100.100.100" | sudo tee /etc/resolver/tail8cc0d3.ts.net
 sudo dscacheutil -flushcache
 sudo killall -HUP mDNSResponder
 ```
-
-TODO I know I did something for setting it up so I could unlock it after a restart via ssh. I forgot everything else
-I did. I am running macOS 26.
 
 ## Recovery
 

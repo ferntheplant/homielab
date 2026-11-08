@@ -61,3 +61,7 @@ CI jobs run in a sandbox that reaches only Forgejo and the internet through a pr
 ## Kata
 
 Kata at `https://kata-api.tail8cc0d3.ts.net` is the issue tracker for agents. The dotfiles set up the `kata` CLI and each agent's actor (`KATA_AUTHOR`), and `kata whoami` shows both. The web UI at `https://kata.tail8cc0d3.ts.net` records your Tailscale login as the actor, so an agent always uses the API ("Kata").
+
+This repo has its own Kata project, and the checkout carries a committed `.kata.toml` that binds it. Pending work on homielab goes there: search with `kata search "<terms>" --agent` first, and reuse an open issue instead of creating a second one for the same work. Keep the two truths apart: the README records how things work, and Kata records what is broken, pending, or half-remembered. When you find pending work, open or reuse a Kata issue for it, and keep the README to what is true now.
+
+Point an issue at stable anchors: a README section heading, a file path, a function name, or a config key. A line number moves with the next edit to the file, so the anchor is the heading or the name.
