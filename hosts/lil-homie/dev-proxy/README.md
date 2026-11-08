@@ -50,8 +50,8 @@ Next.js checks the browser's Origin too, so a Next app may need `allowedDevOrigi
 Caddy cannot listen on the tailnet IP itself: macOS lets only root bind port 443 on one address. Tailscale Serve
 forwards the TCP connection instead, which also keeps the proxy off the LAN.
 
-The Cloudflare token needs **Zone → Zone → Read** and **Zone → DNS → Edit**, on `fjorn.dev` only. It is in the
-1Password item `homielab/Cloudflare`, field `dns-token`. Caddy uses it for the DNS challenge, and `dns.py` for the
+The Cloudflare token needs **Zone → Zone → Read** and **Zone → DNS → Edit**, on `fjorn.dev` only. It is an
+account-owned token, in the 1Password item `homielab/Cloudflare DNS`, field `CLOUDFLARE_API_TOKEN`. Caddy uses it for the DNS challenge, and `dns.py` for the
 record.
 
 ## Install
@@ -64,7 +64,7 @@ ln -sf ~/.local/share/portless/node_modules/.bin/portless ~/.local/bin/portless
 
 # 2. The token, from 1Password
 mkdir -p ~/.config/homielab && (umask 077; printf 'CF_API_TOKEN=%s\n' \
-  "$(op read op://homielab/Cloudflare/dns-token)" > ~/.config/homielab/cloudflare-dns.env)
+  "$(op read 'op://homielab/Cloudflare DNS/CLOUDFLARE_API_TOKEN')" > ~/.config/homielab/cloudflare-dns.env)
 
 # 3. DNS (plan, then apply)
 hosts/lil-homie/dev-proxy/dns.py
