@@ -62,10 +62,16 @@ pages:
 
       - size: full
         widgets:
-          - $include: widget-config/quick-links.yml
-
-          # Tasks stay in the browser's local storage, so each browser has its own list
-          - type: to-do
+          - type: group
+            title: News
+            widgets:
+              - type: hacker-news
+                limit: 15
+                collapse-after: 5
+              - type: lobsters
+                sort-by: hot
+                limit: 15
+                collapse-after: 5
 
           - type: group
             title: Availability
@@ -79,17 +85,6 @@ pages:
                   - title: fjorn.dev
                     url: https://fjorn.dev
                     icon: https://fjorn.dev/favicon.svg
-
-          - type: group
-            title: News
-            widgets:
-              - type: hacker-news
-                limit: 15
-                collapse-after: 5
-              - type: lobsters
-                sort-by: hot
-                limit: 15
-                collapse-after: 5
 
       - size: small
         widgets:

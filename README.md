@@ -613,13 +613,12 @@ Glance is the server dashboard. Complex widgets have their own config file in `g
 Glance server to use my timezone, `glance.Dockerfile` extends the default image with tzdata. The homie stack builds it;
 `./stacks/manage.sh update` rebuilds it on a fresh base. Links in the config use `${TS_TAILNET}` from `.env.shared`.
 
-Layout: the left column has weather, Syncthing, backups, the dog, and xkcd. The center column has the quick
-links, the to-do list, the availability tabs, and the news tabs. The right sidebar has the services monitor, server
-stats, and Forgejo.
+Layout: the left column has weather, Syncthing, backups, the dog, and xkcd. The center column has the news
+tabs above the availability tabs. The right sidebar has the services monitor, server stats, and Forgejo.
+The services monitor links to each Tailscale Service, so there are no quick links.
 
 Widgets:
 
-- Quick links: one link for each Tailscale Service in `tailscale/services.json`, except `svc:lab` (this dashboard)
 - Services: Glance's built-in `monitor` widget, checking each service over `caddy_network` (Forgejo over
   `forgejo_glance`)
 - [Beszel server stats](https://github.com/glanceapp/community-widgets/blob/main/widgets/beszel-server-stats/README.md):
@@ -645,7 +644,7 @@ Widgets:
   [Weather](https://github.com/glanceapp/community-widgets/blob/main/widgets/weather-seven-day/README.md): default instructions
 - [xkcd](https://github.com/glanceapp/community-widgets/blob/main/widgets/xkcd-widget/README.md): the latest comic,
   with its alt text on hover
-- Built-in: `to-do` (the tasks stay in each browser's local storage), `hacker-news`, and `lobsters`
+- Built-in: `hacker-news` and `lobsters`
 
 ## Beszel
 
