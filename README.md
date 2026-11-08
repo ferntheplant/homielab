@@ -454,8 +454,8 @@ Reverse proxy authentication does not cover the API. API calls need an access to
    ```
 
 5. Add your SSH public key in Settings → SSH / GPG keys. To show your signed commits as verified, click
-   **Verify** on the key. The signature namespace is the host name, not `git`:
-   `echo -n '<token>' | ssh-keygen -Y sign -n forgejo.tail8cc0d3.ts.net -f ~/.ssh/id_ed25519`
+   **Verify** on the key, then run the command that Forgejo shows. Forgejo makes it from its current settings, with a
+   new token each time, so copy it from the page. Its `-n` namespace is not `git`.
 
 To reset the password, run `docker exec -it forgejo forgejo admin user change-password -u ferntheplant -p <new>`.
 
