@@ -32,8 +32,16 @@
 		// The homielab Services (tailscale/services.json). Keep this list the same as that file.
 		{
 			"src": ["autogroup:member"],
-			"dst": ["svc:lab", "svc:karakeep", "svc:forgejo"],
-			"ip":  ["tcp:443"],
+			"dst": [
+				"svc:lab",
+				"svc:karakeep",
+				"svc:forgejo",
+				"svc:syncthing",
+				"svc:backrest",
+				"svc:logs",
+				"svc:beszel",
+			],
+			"ip": ["tcp:443"],
 		},
 		{
 			// Forgejo git over SSH
@@ -46,9 +54,13 @@
 	// micro-homie hosts the homielab Services. This approves it as their host without the admin console.
 	"autoApprovers": {
 		"services": {
-			"svc:lab":      ["tag:micro-homie"],
-			"svc:karakeep": ["tag:micro-homie"],
-			"svc:forgejo":  ["tag:micro-homie"],
+			"svc:lab":       ["tag:micro-homie"],
+			"svc:karakeep":  ["tag:micro-homie"],
+			"svc:forgejo":   ["tag:micro-homie"],
+			"svc:syncthing": ["tag:micro-homie"],
+			"svc:backrest":  ["tag:micro-homie"],
+			"svc:logs":      ["tag:micro-homie"],
+			"svc:beszel":    ["tag:micro-homie"],
 		},
 	},
 
@@ -105,7 +117,16 @@
 	"tests": [
 		{
 			"src":    "ferntheplant@github",
-			"accept": ["svc:lab:443", "svc:karakeep:443", "svc:forgejo:443", "svc:forgejo:22"],
+			"accept": [
+				"svc:lab:443",
+				"svc:karakeep:443",
+				"svc:forgejo:443",
+				"svc:forgejo:22",
+				"svc:syncthing:443",
+				"svc:backrest:443",
+				"svc:logs:443",
+				"svc:beszel:443",
+			],
 		},
 	],
 }

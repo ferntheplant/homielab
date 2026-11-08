@@ -1,4 +1,4 @@
-# Sign-in proxy for Forgejo. Tailscale Serve (:3001) -> this Caddy -> forgejo:3000.
+# Sign-in proxy for Forgejo. Tailscale Service forgejo -> this Caddy -> forgejo:3000.
 #
 # Tailscale Serve adds Tailscale-User-Login to each request from a tailnet user and removes any copy
 # that the client sends. Forgejo trusts X-WEBAUTH-USER as the signed-in user (reverse proxy

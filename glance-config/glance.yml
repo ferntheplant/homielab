@@ -58,24 +58,24 @@ pages:
                 title: Services
                 sites:
                   - title: karakeep
-                    url: https://${TS_HOST}:3003
+                    url: https://karakeep.${TS_TAILNET}
                     check-url: http://karakeep-web:3000/api/health
                     icon: sh:karakeep
                   - title: backrest
-                    url: https://${TS_HOST}/backrest/
+                    url: https://backrest.${TS_TAILNET}
                     check-url: http://backrest:9898
                     icon: sh:backrest
                   - title: syncthing
-                    url: https://${TS_HOST}/syncthing/
+                    url: https://syncthing.${TS_TAILNET}
                     check-url: http://syncthing:8384/rest/noauth/health
                     icon: sh:syncthing
                   - title: beszel
-                    url: https://${TS_HOST}/beszel
+                    url: https://beszel.${TS_TAILNET}
                     check-url: http://beszel:8090/api/health
                     icon: sh:beszel
                   - title: dozzle
-                    url: https://${TS_HOST}/logs
-                    check-url: http://dozzle:8080/logs/healthcheck
+                    url: https://logs.${TS_TAILNET}
+                    check-url: http://dozzle:8080/healthcheck
                     icon: sh:dozzle
               - $include: widget-config/docker.yml
               - $include: widget-config/launchctl-agents.yml

@@ -202,33 +202,40 @@ Karakeep rebuilds the search index (Admin → Background jobs → reindex).
 
 ## Tailscale
 
-All access is via Tailscale. The server is `micro-homie.tail8cc0d3.ts.net`. Serve publishes to the tailnet only:
-
-- `https://micro-homie.tail8cc0d3.ts.net/` → `127.0.0.1:8080` (Caddy: dashboard, `/logs`, `/beszel`, `/syncthing`, `/backrest`)
-- `https://micro-homie.tail8cc0d3.ts.net:3003/` → `127.0.0.1:3000` (Karakeep, needs its own origin for the app/extension)
-- `https://micro-homie.tail8cc0d3.ts.net:3001/` → `127.0.0.1:3001` (Forgejo web, through its sign-in proxy)
-- `micro-homie.tail8cc0d3.ts.net:2222` (TCP) → `127.0.0.1:2222` (Forgejo git over SSH)
-
-`./stacks/manage.sh serve` applies this (the mapping lives at the top of `manage.sh`). `setup-micro-homie.sh` makes
-`fjorn` the Tailscale operator, so `tailscale serve` works without sudo. If `tailscale serve status` shows
-`No serve config`, run it once interactively to get the one-time consent flow.
-
-`.env.shared` holds the tailnet names (`TS_HOST`, `LIL_HOMIE_HOST`). The compose files and the Glance config read
-them, so a rename is a one-line change.
+All access is via Tailscale, to the tailnet only. The server is `micro-homie.tail8cc0d3.ts.net`.
 
 ### Tailscale Services
 
-Each service also has its own tailnet name, a [Tailscale Service](https://tailscale.com/docs/features/tailscale-services)
-with its own HTTPS certificate. micro-homie hosts them all:
+Each app has its own tailnet name, a [Tailscale Service](https://tailscale.com/docs/features/tailscale-services)
+with its own HTTPS certificate. micro-homie hosts them all (`tailscale/services.json`):
 
-- `https://lab.tail8cc0d3.ts.net/` → `127.0.0.1:8080` (Caddy: dashboard and its subpaths)
+- `https://lab.tail8cc0d3.ts.net/` → `127.0.0.1:8080` (Caddy → Glance dashboard)
 - `https://karakeep.tail8cc0d3.ts.net/` → `127.0.0.1:3000`
-- `https://forgejo.tail8cc0d3.ts.net/` → `127.0.0.1:3001`, and `forgejo.tail8cc0d3.ts.net:22` (TCP) → `127.0.0.1:2222`
+- `https://forgejo.tail8cc0d3.ts.net/` → `127.0.0.1:3001` (sign-in proxy), and `forgejo.tail8cc0d3.ts.net:22` (TCP)
+  → `127.0.0.1:2222` (git over SSH)
+- `https://syncthing.tail8cc0d3.ts.net/` → `127.0.0.1:8384`
+- `https://backrest.tail8cc0d3.ts.net/` → `127.0.0.1:9898`
+- `https://logs.tail8cc0d3.ts.net/` → `127.0.0.1:8082` (Dozzle)
+- `https://beszel.tail8cc0d3.ts.net/` → `127.0.0.1:8090`
 
-The ports above on `micro-homie.tail8cc0d3.ts.net` still work while the links and Forgejo's `ROOT_URL` move to these
-names.
+A Service host must be a tagged device, so micro-homie is `tag:micro-homie` and has no user identity. Serve still adds
+the `Tailscale-User-Login` header for a request from your own devices, so Forgejo sign-in works (tested).
 
-A Service host must be a tagged device, so micro-homie is `tag:micro-homie` and has no user identity.
+`.env.shared` holds the tailnet names (`TS_TAILNET`, `TS_HOST`, `LIL_HOMIE_HOST`). The compose files and the Glance
+config read them, so a rename is a one-line change.
+
+### The old ports
+
+Serve on the box's own name still publishes the old addresses (`TAILSCALE_SERVE` at the top of `manage.sh`), for
+clients that are not moved yet, like the Karakeep app:
+
+- `https://micro-homie.tail8cc0d3.ts.net/` → `127.0.0.1:8080` (the dashboard only; the subpaths are gone)
+- `https://micro-homie.tail8cc0d3.ts.net:3003/` → `127.0.0.1:3000` (Karakeep)
+- `https://micro-homie.tail8cc0d3.ts.net:3001/` → `127.0.0.1:3001` (Forgejo)
+- `micro-homie.tail8cc0d3.ts.net:2222` (TCP) → `127.0.0.1:2222` (Forgejo git over SSH)
+
+`setup-micro-homie.sh` makes `fjorn` the Tailscale operator, so `tailscale serve` works without sudo. If
+`tailscale serve status` shows `No serve config`, run it once interactively to get the one-time consent flow.
 
 ### Tailnet config in code
 
@@ -316,9 +323,8 @@ shell rendering (atuin, zsh-autosuggestions, fzf-tab) to get the SSH experience 
 
 ## Caddy
 
-Caddy routes subpaths to containers on `caddy_network`. In the Caddyfile, `handle_path` strips the base path before
-proxying (for apps that can't be configured with one) and `handle` forwards the path as-is (for apps configured with a
-base path, like dozzle's `DOZZLE_BASE=/logs`).
+Caddy serves only the dashboard: `svc:lab` → `127.0.0.1:8080` → `glance:8080`. Every other app has its own Tailscale
+Service, so no app needs a base path.
 
 ## Syncthing
 
@@ -327,7 +333,7 @@ I use Syncthing to keep a handful of folders in sync across my devices.
 ### Tailnet-only setup
 
 The sync port (`22000`, TCP and UDP) binds to micro-homie's tailnet IP (`TS_IP` in `.env.shared`), so nothing on the
-LAN can reach it. The GUI binds to `127.0.0.1` and is only reachable through Caddy at `/syncthing`.
+LAN can reach it. The GUI binds to `127.0.0.1` and is only reachable at `https://syncthing.tail8cc0d3.ts.net`.
 
 The other devices point at micro-homie's tailnet IP: `tcp://100.80.5.26:22000`.
 
@@ -341,7 +347,8 @@ Cloudflare R2 bucket. See [Backups](#backups) for what gets backed up. The Backr
 
 ## Karakeep
 
-Served on a dedicated Tailscale Serve port for mobile/extension compatibility: `https://micro-homie.tail8cc0d3.ts.net:3003/`
+Served at `https://karakeep.tail8cc0d3.ts.net`, its own origin, for the mobile app and the browser extension. Set that
+address as the server in each of them.
 
 ### AI tagging (llama-server)
 
@@ -387,8 +394,11 @@ journalctl --user -u karakeep-classify.service              # log
 
 [Forgejo](https://forgejo.org) is the git host. It is tailnet-only, like everything else:
 
-- web: `https://micro-homie.tail8cc0d3.ts.net:3001/`
-- git: `ssh://git@micro-homie.tail8cc0d3.ts.net:2222/ferntheplant/<repo>.git`
+- web: `https://forgejo.tail8cc0d3.ts.net/`
+- git: `git@forgejo.tail8cc0d3.ts.net:ferntheplant/<repo>.git` (SSH), or `https://forgejo.tail8cc0d3.ts.net/ferntheplant/<repo>.git`
+  (HTTPS, signed in by your Tailscale login)
+
+The SSH host key is the same as on the old `micro-homie.tail8cc0d3.ts.net:2222`.
 
 Push to create is on for my user: a push to a `ferntheplant/<repo>` that does not exist creates it as a private repo.
 A push from a deploy key cannot create a repo, because it needs a key on the user account.
@@ -441,7 +451,7 @@ Reverse proxy authentication does not cover the API. API calls need an access to
 
 5. Add your SSH public key in Settings → SSH / GPG keys. To show your signed commits as verified, click
    **Verify** on the key. The signature namespace is the host name, not `git`:
-   `echo -n '<token>' | ssh-keygen -Y sign -n micro-homie.tail8cc0d3.ts.net -f ~/.ssh/id_ed25519`
+   `echo -n '<token>' | ssh-keygen -Y sign -n forgejo.tail8cc0d3.ts.net -f ~/.ssh/id_ed25519`
 
 To reset the password, run `docker exec -it forgejo forgejo admin user change-password -u ferntheplant -p <new>`.
 
@@ -555,7 +565,7 @@ with write access on `homielab` only. The repo's git config selects the key:
 
 ```bash
 git config core.sshCommand "ssh -i ~/.ssh/homielab_forgejo -o IdentitiesOnly=yes"
-git remote set-url origin ssh://git@micro-homie.tail8cc0d3.ts.net:2222/ferntheplant/homielab.git
+git remote set-url origin git@forgejo.tail8cc0d3.ts.net:ferntheplant/homielab.git
 ```
 
 On a new box, make a new key and add it in Forgejo: homielab > Settings > Deploy keys, with write access.
@@ -564,8 +574,8 @@ The deploy key is not a security limit on micro-homie. Two things give every pro
 access to Forgejo:
 
 - `fjorn` is in the `docker` group, which is the same as root. It can change Forgejo's data directly.
-- micro-homie is a tailnet device that you own, so Tailscale Serve signs its requests in as you, git over HTTPS
-  included (tested).
+- Any process on the box can send `Tailscale-User-Login` to the sign-in proxy on `127.0.0.1:3001`, which signs it in
+  as you (`scripts/forgejo-github-mirror.sh` does this). Through Tailscale, the tagged box is not signed in.
 
 ### jj
 
@@ -600,14 +610,15 @@ The iMessage bridge runs on lil-homie, see below.
 
 Glance is the server dashboard. Complex widgets have their own config file in `glance-config/widget-config`. To get the
 Glance server to use my timezone, `glance.Dockerfile` extends the default image with tzdata. The homie stack builds it;
-`./stacks/manage.sh update` rebuilds it on a fresh base. Links in the config use `${TS_HOST}` from `.env.shared`.
+`./stacks/manage.sh update` rebuilds it on a fresh base. Links in the config use `${TS_TAILNET}` from `.env.shared`.
 
 Widgets:
 
 - [Karakeep](https://github.com/glanceapp/community-widgets/blob/main/widgets/karakeep-dashboard/README.md): calls `karakeep-web:3000` directly over `caddy_network`
 - Services: Glance's built-in `monitor` widget, checking each service over `caddy_network`
-- [Beszel](https://github.com/glanceapp/community-widgets/blob/main/widgets/beszel-metrics/README.md): proxied by Caddy
-  behind `/beszel`, so it needs `APP_URL` and `handle_path`. The API token expires once a year, see [Beszel](#beszel).
+- [Beszel](https://github.com/glanceapp/community-widgets/blob/main/widgets/beszel-metrics/README.md): calls the hub
+  over `caddy_network`, and links to `https://beszel.tail8cc0d3.ts.net` (`APP_URL`). The API token expires once a
+  year, see [Beszel](#beszel).
   TODO: find a way to notify when the API token is expired
 - [Syncthing](https://github.com/glanceapp/community-widgets/blob/main/widgets/syncthing/README.md): hard coded values swapped for env variables
 - [Backrest](https://github.com/not-first/restic-glance-extension): for a remote repo you only need the env variables.
@@ -625,8 +636,8 @@ The hub runs in the homie stack. Each machine has an agent that connects to the 
 (the hub public key) and `TOKEN` (from "Add system" in the hub).
 
 - micro-homie: the `beszel-agent` container, `HUB_URL=http://127.0.0.1:8090`
-- lil-homie: the `dev.fjorn.beszel-agent` launchd agent, `HUB_URL=https://micro-homie.tail8cc0d3.ts.net/beszel`
-- gaming-homie: the `beszel-agent` Windows service, `HUB_URL=https://micro-homie.tail8cc0d3.ts.net/beszel`.
+- lil-homie: the `dev.fjorn.beszel-agent` launchd agent, `HUB_URL=https://beszel.tail8cc0d3.ts.net`
+- gaming-homie: the `beszel-agent` Windows service, `HUB_URL=https://beszel.tail8cc0d3.ts.net`.
   The [Windows install script](https://www.beszel.dev/guide/agent-installation#windows) installed the agent and NSSM
   with WinGet. NSSM runs the agent as a service and keeps `KEY`, `TOKEN`, `HUB_URL` and `PORT` in the service
   settings, not in an env file. The log is `C:\ProgramData\beszel-agent\logs\beszel-agent.log`. In an admin

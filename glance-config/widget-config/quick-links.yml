@@ -4,21 +4,21 @@
     - title: tailnet-only
       links:
       - title: karakeep
-        url: https://${TS_HOST}:3003
+        url: https://karakeep.${TS_TAILNET}
         icon: sh:karakeep
       - title: forgejo
-        url: https://${TS_HOST}:3001
+        url: https://forgejo.${TS_TAILNET}
         icon: sh:forgejo
 
     - title: management
       links:
       - title: backrest
-        url: https://${TS_HOST}/backrest
+        url: https://backrest.${TS_TAILNET}
         icon: sh:backrest
       - title: logs
-        url: https://${TS_HOST}/logs
+        url: https://logs.${TS_TAILNET}
         icon: sh:dozzle
       - title: metrics
-        url: https://${TS_HOST}/beszel
+        url: https://beszel.${TS_TAILNET}
         icon: sh:beszel
 

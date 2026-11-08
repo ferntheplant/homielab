@@ -15,7 +15,7 @@ services:
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
       BROWSER_WEB_URL: http://karakeep-chrome:9222
       DISABLE_SIGNUPS: ${DISABLE_SIGNUPS}
-      NEXTAUTH_URL: https://${TS_HOST}:3003
+      NEXTAUTH_URL: https://karakeep.${TS_TAILNET}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       CRAWLER_NUM_WORKERS: ${CRAWLER_NUM_WORKERS}
       # llama-server on lil-homie (Tailscale Serve), OpenAI-compatible /v1 API. Thinking is off on the

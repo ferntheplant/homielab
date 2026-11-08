@@ -25,7 +25,6 @@ services:
     image: amir20/dozzle:latest
     restart: unless-stopped
     environment:
-      - DOZZLE_BASE=/logs
       - DOCKER_HOST=tcp://socket-proxy:2375
     depends_on:
       - socket-proxy
@@ -40,7 +39,7 @@ services:
     container_name: beszel
     restart: unless-stopped
     environment:
-      - APP_URL=https://${TS_HOST}/beszel
+      - APP_URL=https://beszel.${TS_TAILNET}
     ports:
       - 127.0.0.1:8090:8090
     volumes:
@@ -80,7 +79,7 @@ services:
       - BESZEL_API_TOKEN=${BESZEL_API_TOKEN}
       - CALENDAR_URL=${CALENDAR_URL}
       - KARAKEEP_API_KEY=${KARAKEEP_API_KEY}
-      - TS_HOST=${TS_HOST}
+      - TS_TAILNET=${TS_TAILNET}
       - LIL_HOMIE_HOST=${LIL_HOMIE_HOST}
       - LAT=${LAT}
       - LON=${LON}

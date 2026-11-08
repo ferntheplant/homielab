@@ -1,31 +1,5 @@
+# The dashboard: Tailscale Service svc:lab (and the box's own name on 443) -> 127.0.0.1:8080 -> glance.
+# Every other app has its own Tailscale Service and name (tailscale/services.json), so there are no subpaths.
 :80 {
-  handle /logs* {
-    reverse_proxy dozzle:8080
-  }
-
-  handle_path /beszel* {
-    reverse_proxy beszel:8090 {
-      transport http {
-        read_timeout 360s
-      }
-    }
-  }
-
-  @syncthing_root path /syncthing
-  redir @syncthing_root /syncthing/ 308
-
-  handle_path /syncthing* {
-    reverse_proxy syncthing:8384
-  }
-
-  @backrest_root path /backrest
-  redir @backrest_root /backrest/ 308
-
-  handle_path /backrest* {
-    reverse_proxy backrest:9898
-  }
-
-  handle /* {
-    reverse_proxy glance:8080
-  }
+  reverse_proxy glance:8080
 }

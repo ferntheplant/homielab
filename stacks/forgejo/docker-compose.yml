@@ -1,6 +1,6 @@
 # Forgejo: the git host. Tailnet only, see README "Forgejo".
-#   web: Tailscale Serve :3001 -> 127.0.0.1:3001 -> forgejo-proxy (sign-in header) -> forgejo:3000
-#   ssh: Tailscale Serve :2222 (TCP) -> 127.0.0.1:2222 -> forgejo:2222 (built-in SSH server)
+#   web: Tailscale Service forgejo (443) -> 127.0.0.1:3001 -> forgejo-proxy (sign-in header) -> forgejo:3000
+#   ssh: Tailscale Service forgejo (TCP 22) -> 127.0.0.1:2222 -> forgejo:2222 (built-in SSH server)
 #   CI:  forgejo_ci -> forgejo-ci (no sign-in header) -> forgejo:3000
 # Not on caddy_network: no other container can reach Forgejo or send it a sign-in header.
 services:
@@ -16,11 +16,12 @@ services:
     ports:
       - 127.0.0.1:2222:2222
     environment:
-      FORGEJO__server__DOMAIN: ${TS_HOST}
-      FORGEJO__server__ROOT_URL: https://${TS_HOST}:3001/
+      FORGEJO__server__DOMAIN: forgejo.${TS_TAILNET}
+      FORGEJO__server__ROOT_URL: https://forgejo.${TS_TAILNET}/
       FORGEJO__server__HTTP_PORT: "3000"
-      FORGEJO__server__SSH_DOMAIN: ${TS_HOST}
-      FORGEJO__server__SSH_PORT: "2222"
+      FORGEJO__server__SSH_DOMAIN: forgejo.${TS_TAILNET}
+      # The port in clone URLs. Forgejo listens on 2222; the Service forwards 22 to it.
+      FORGEJO__server__SSH_PORT: "22"
       FORGEJO__server__SSH_LISTEN_PORT: "2222"
       FORGEJO__database__DB_TYPE: sqlite3
       FORGEJO__security__INSTALL_LOCK: "true"
