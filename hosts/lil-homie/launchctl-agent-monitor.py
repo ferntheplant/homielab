@@ -35,7 +35,16 @@ SERVICES = [
     {
         "label": "dev.fjorn.beszel-agent",
         "display_name": "Beszel Agent",
-    }
+    },
+    {
+        # The dev proxy (dev-proxy/README.md): TLS for https://*.dev.fjorn.dev
+        "label": "dev.fjorn.dev-proxy-caddy",
+        "display_name": "Dev proxy (Caddy)",
+    },
+    {
+        "label": "dev.fjorn.portless",
+        "display_name": "Dev proxy (portless)",
+    },
     # Add more services here as needed
     # {
     #     "label": "com.example.another-service",
