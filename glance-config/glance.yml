@@ -96,11 +96,20 @@ pages:
                 url: https://karakeep.${TS_TAILNET}
                 check-url: http://karakeep-web:3000/api/health
                 icon: sh:karakeep
+              - title: kata
+                url: https://kata.${TS_TAILNET}
+                # Through kata-gate on kata_glance (stacks/kata/Caddyfile), the health check only
+                check-url: http://kata-gate:8080/api/v1/health
+                icon: mdi:checkbox-marked-outline
               - title: forgejo
                 url: https://forgejo.${TS_TAILNET}
                 # Through forgejo-ci on forgejo_glance (stacks/forgejo/docker-compose.yml)
                 check-url: http://forgejo-ci/api/healthz
                 icon: sh:forgejo
+              - title: beszel
+                url: https://beszel.${TS_TAILNET}
+                check-url: http://beszel:8090/api/health
+                icon: sh:beszel
               - title: backrest
                 url: https://backrest.${TS_TAILNET}
                 check-url: http://backrest:9898
@@ -109,19 +118,10 @@ pages:
                 url: https://syncthing.${TS_TAILNET}
                 check-url: http://syncthing:8384/rest/noauth/health
                 icon: sh:syncthing
-              - title: beszel
-                url: https://beszel.${TS_TAILNET}
-                check-url: http://beszel:8090/api/health
-                icon: sh:beszel
               - title: dozzle
                 url: https://logs.${TS_TAILNET}
                 check-url: http://dozzle:8080/healthcheck
                 icon: sh:dozzle
-              - title: kata
-                url: https://kata.${TS_TAILNET}
-                # Through kata-gate on kata_glance (stacks/kata/Caddyfile), the health check only
-                check-url: http://kata-gate:8080/api/v1/health
-                icon: mdi:checkbox-marked-outline
 
           - $include: widget-config/beszel.yml
 

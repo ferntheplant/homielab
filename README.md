@@ -718,7 +718,7 @@ The services monitor links to each Tailscale Service, so there are no quick link
 Widgets:
 
 - Services: Glance's built-in `monitor` widget, checking each service over `caddy_network` (Forgejo over
-  `forgejo_glance`)
+  `forgejo_glance`, Kata over `kata_glance`)
 - [Beszel server stats](https://github.com/glanceapp/community-widgets/blob/main/widgets/beszel-server-stats/README.md):
   calls the hub over `caddy_network` (`BESZEL_URL` is `host:port`, no scheme), and links to
   `https://beszel.tail8cc0d3.ts.net` (`APP_URL`). The API token expires once a year, see [Beszel](#beszel).
