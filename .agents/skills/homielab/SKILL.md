@@ -1,6 +1,6 @@
 ---
 name: homielab
-description: The homielab home servers and tailnet. Use when work touches lil-homie, micro-homie, or another homielab machine; runs a command on micro-homie; serves a dev server to other devices; uses a Forgejo repo, pull request, or CI run; or needs a homielab service URL.
+description: The homielab home servers and tailnet. Use when work touches lil-homie, micro-homie, gaming-homie, or another homielab machine; runs a command on micro-homie or gaming-homie; uses the Comet KVM; serves a dev server to other devices; uses a Forgejo repo, pull request, or CI run; or needs a homielab service URL.
 ---
 
 # homielab
@@ -15,7 +15,7 @@ Run `hostname -s` first. The machine decides what you can reach:
 | --- | --- | --- |
 | `lil-homie` | Mac mini devbox | agents, dev servers (the dev proxy), llama-server, the Beeper bridge |
 | `micro-homie` | Debian 13 micro PC | every container stack, Forgejo, Kata, the Rex login server; no agents |
-| `gaming-homie` | Windows 11 PC | a Beszel agent only |
+| `gaming-homie` | Windows 11 PC | a Beszel agent; the Comet KVM controls it |
 | any other name | a laptop | agents; it reaches the rest over the tailnet |
 
 Everything is on the tailnet `tail8cc0d3.ts.net`, and nothing is on the public internet. Each app is a Tailscale Service with its own name, such as `https://forgejo.tail8cc0d3.ts.net`. The full list is in "Tailscale Services".
@@ -29,6 +29,10 @@ rex -S https://micro-homie.tail8cc0d3.ts.net:7297 run -c ~/homielab -- <command>
 ```
 
 The `rex` skill covers the rest of the CLI (`capture`, `send`, `wait`). The terminal runs as `fjorn`, who is in the `docker` group, so it has full access to every service: ask before you stop, update, or delete a stack. Stacks change through `./stacks/manage.sh`, which takes a snapshot before an update ("Stacks + Manage Script").
+
+## Control gaming-homie
+
+When gaming-homie runs, use SSH: `ssh gaming-homie <command>`. The shell is PowerShell. When it is off, frozen, in the BIOS, or off the network, use the Comet KVM through the kvm-pilot MCP tools (`mcp__kvm-pilot__*`). Start with `healthcheck` and `snapshot`. The server is read-only by default, and the Comet is reachable only from the home network. Ask the user before you turn the PC off or restart it. Details, and the fix when every API call returns 404: "Comet (KVM)".
 
 ## Serve a dev server
 

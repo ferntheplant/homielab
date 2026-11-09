@@ -9,7 +9,8 @@ lil-homie. The checkout is `~/homielab` on both boxes.
   llama-server (the local LLM), the Beeper iMessage bridge, a Beszel agent, and a small status server for the
   dashboard. See
   [lil-homie (the Mac)](#lil-homie-the-mac).
-- **gaming-homie**: the Windows 11 gaming PC. It runs only a Beszel agent (see [Beszel](#beszel)).
+- **gaming-homie**: the Windows 11 gaming PC. It runs only a Beszel agent (see [Beszel](#beszel)). A Comet KVM
+  controls it when it is off or frozen (see [Comet (KVM)](#comet-kvm)).
 
 ## Layout
 
@@ -325,10 +326,10 @@ agent in one has the same access to the services as you do.
 
 ## Agents
 
-`.agents/skills/homielab/` is a skill for coding agents: which machine is which, Rex terminals on micro-homie, the
-dev proxy, Forgejo, and Kata. It points to the sections of this README, so keep the two in step. The dotfiles link it
-into each agent's skills on every machine that has this checkout at `~/homielab` (`scripts/link-skills.sh` there), so
-a `git pull` here updates it everywhere.
+`.agents/skills/homielab/` is a skill for coding agents: which machine is which, Rex terminals on micro-homie, SSH
+and the KVM for gaming-homie, the dev proxy, Forgejo, and Kata. It points to the sections of this README, so keep the
+two in step. The dotfiles link it into each agent's skills on every machine that has this checkout at `~/homielab`
+(`scripts/link-skills.sh` there), so a `git pull` here updates it everywhere.
 
 ## SSH
 
@@ -759,7 +760,8 @@ The hub runs in the homie stack. Each machine has an agent that connects to the 
   run `winget upgrade --exact --id henrygd.beszel-agent`, then `nssm restart beszel-agent`. The service runs
   `WinGet\Links\beszel-agent.exe`, so the path stays the same after an upgrade
 
-SSH to gaming-homie is `ssh fjorn@gaming-homie` (Windows OpenSSH; the default shell is `cmd.exe`). The account is an
+SSH to gaming-homie is `ssh fjorn@gaming-homie` (Windows OpenSSH; the default shell is PowerShell, so use
+PowerShell syntax, not `cmd.exe` syntax such as `%USERNAME%`). The account is an
 admin, so its keys are in `C:\ProgramData\ssh\administrators_authorized_keys`, not in `~\.ssh\authorized_keys`.
 
 Forgot the login password? There is no email setup, so reset it on micro-homie. The script asks for the new
@@ -783,6 +785,33 @@ Server Stats widget is empty, make a new token:
    ```
 
 3. On micro-homie, run `~/homielab/stacks/manage.sh start homie` to recreate Glance with the new token.
+
+## Comet (KVM)
+
+The GL.iNet Comet (GL-RM1) is an IP-KVM for gaming-homie. It captures gaming-homie's HDMI output, acts as its USB
+keyboard and mouse, and controls its power through the ATX power board. Use it when gaming-homie is off, frozen, in
+the BIOS, or off the network. For a PC that runs, SSH is faster and more reliable (see [Beszel](#beszel) for the
+login).
+
+- **Network:** the Comet is on the home network, not on the tailnet. The router's DHCP gives it an address, and its
+  name is `glkvm.local` (mDNS, so only on the home network). Its MAC address is `94:83:c4:ca:0d:35`.
+- **Dashboard:** `https://glkvm.local`, user `admin`. Firefox shows no video, and Safari works.
+- **Display:** Windows sees the Comet as a second monitor. "Extend these displays" works, with the main monitor as
+  the main display.
+- **LED:** solid blue while it starts. Then flashing white (no internet) or solid white (internet).
+- **Agents:** the kvm-pilot MCP server, read-only by default. The dotfiles install it on each agent machine and
+  register it with Claude Code (see "KVM" in the dotfiles README).
+
+The Comet connects to a TP-Link TL-SG105 switch. The cable from that switch to the router runs through the walls and
+carries only 100 Mbps. In 2026-11, one switch port lost its link to the router again and again, so the Comet got no
+address. Its LED was flashing white and the router did not list it. Moving the router cable to a different port fixed
+it. If the Comet disappears again, look at the switch's light for the router cable first: it must stay green.
+
+**API:** kvm-pilot uses the Comet's PiKVM-style API (`https://glkvm.local/api/...`). On GL.iNet firmware it can be off,
+and a firmware update can turn it off again: then every `/api/*` call returns 404. To turn it on, SSH in as `root`,
+uncomment the API block in `/etc/kvmd/nginx-kvmd.conf`, and restart the Comet. Update the firmware through the
+dashboard: kvm-pilot's update command does nothing on this hardware. kvm-pilot screenshots at the native resolution
+need firmware V1.9.1 or newer. With older firmware, `snapshot` returns HTTP 503.
 
 ## lil-homie (the Mac)
 
