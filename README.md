@@ -657,8 +657,8 @@ Point an agent at the API and give it a name:
 
 ```bash
 export KATA_SERVER=https://kata-api.tail8cc0d3.ts.net
-export KATA_AUTHOR=claude-lil-homie     # the actor on each issue, comment, and close
-export KATA_TEAMMATE=reviewer           # optional: a sub-agent under the actor
+export KATA_AUTHOR=opus-5-5+claude@lil-homie  # the actor: <model>+<harness>@<host>
+export KATA_TEAMMATE=reviewer                # optional: a sub-agent under the actor
 kata whoami
 ```
 
@@ -666,7 +666,7 @@ Do not point an agent at `kata.tail8cc0d3.ts.net`: there, the actor is your Tail
 do not run on micro-homie (see [Rex](#rex)), so no client uses `127.0.0.1:7778`.
 
 The dotfiles set up the clients: the `kata` CLI, `~/.kata/config.toml` with the daemon URL, each agent's actor, and
-the agent hooks (see the Kata section of the dotfiles README).
+the agent hooks (see the Kata and "Agent identity" sections of the dotfiles README).
 
 ### Semantic search
 
