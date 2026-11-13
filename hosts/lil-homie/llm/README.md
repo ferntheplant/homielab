@@ -80,8 +80,23 @@ time through llama-cpp-python. `anyjev_llamaserver.py` is a backend for AnyJev's
 that uses llama-server's `/apply-template`, `/tokenize` and `/completion` (`n_probs`) instead.
 The decision process holds no model (~40 MB).
 
-Question kinds: `choice` (options), `noul` (yes/no), `score` (`bins` + `scale`, or `levels`).
-`level` is `L0` (default) or `raw`.
+| `kind` | Fields | The reply adds |
+| --- | --- | --- |
+| `choice` | `text`, `options` (2 to 26) | `distribution` |
+| `noul` (yes/no) | `text` | `probability` (of Yes), `distribution` |
+| `score` | `text`, plus `bins` (2 to 10) with optional `scale` `[lo, hi]`, or `levels` (2 to 10 labels) | `value` (the expected value), `distribution` |
+
+Every question also takes an optional `name`, and the reply is keyed by that name. `state` can be
+a string, a JSON object, or a chat transcript (a list of `{role, content}`). `level` is `L0`
+(default) or `raw`. Thinking is always off for a decision.
+
+There are three ways in, and each one uses the one copy of the model in llama-server.
+
+### 1. HTTP, from any language
+
+The `dev.fjorn.anyjev-decide` agent is always on. It handles one decision at a time, and other
+requests wait. A bad question returns HTTP 400. HTTP 502 means that llama-server did not answer.
+The log is `~/Library/Logs/llama-server/decide.log`.
 
 ```bash
 curl -s 127.0.0.1:8766/decide -d '{
@@ -91,7 +106,13 @@ curl -s 127.0.0.1:8766/decide -d '{
     {"name": "refund", "kind": "noul", "text": "Does the customer want money back?"},
     {"name": "anger", "kind": "score", "text": "How angry is the customer?", "bins": 5}
   ]}'
+
+curl -s 127.0.0.1:8766/health
 ```
+
+### 2. Python, through the wrapper
+
+This way goes straight to llama-server and does not use port 8766.
 
 ```python
 import sys; sys.path.insert(0, "/Users/fjorn/homielab/hosts/lil-homie/llm")
@@ -99,6 +120,26 @@ from decide import decide          # run with ~/anyjev-venv/bin/python
 decide("Ticket: ...", [{"name": "team", "kind": "choice", "text": "Which team?", "options": ["billing", "tech"]}],
        level="L0")
 ```
+
+Pass `decider=make_decider()` (also from `decide`) for a fresh `Decider`: see "Repeatable tests".
+
+### 3. Python, with AnyJev itself
+
+Use this way for the `Decider` options that the wrapper does not expose, for example
+`max_permutations`, `prior` and `adaptive_shifts`.
+
+```python
+import sys; sys.path.insert(0, "/Users/fjorn/homielab/hosts/lil-homie/llm")
+from anyjev import Decider, Question
+from anyjev_llamaserver import LlamaServerBackend
+
+d = Decider(LlamaServerBackend("http://127.0.0.1:8080", model="qwen3.5-4b"),
+            level="L0", canonical_order=True, prior="none")
+res = d.decide("some state", [Question.choice("Which?", ["a", "b", "c"], name="q")])
+print(res["q"].distribution)
+```
+
+### The reply and the levels
 
 Every answer has `distribution` (option → probability); `noul` adds `probability` (of Yes) and
 `score` adds `value` (the expected value over the levels or bins).
@@ -111,7 +152,17 @@ Every answer has `distribution` (option → probability); `noul` adds `probabili
 - AnyJev's L0 also divides out a label prior that it learns from earlier decisions on the same
   question (after 8 of them). The prior lives in the `decide.py` process and resets on restart.
 
-Check it: `~/anyjev-venv/bin/python hosts/lil-homie/llm/verify_decisions.py`.
+### Repeatable tests
+
+The HTTP service keeps one `Decider` for its whole life, so its L0 answers include the learned
+label prior. Thus a test run through HTTP can change what later callers get, and the same request
+can give different numbers over time. For results that do not depend on history, use way 2 with
+`decider=make_decider()` or way 3 with `prior="none"`.
+
+### Check and measurements
+
+Check it (~2 min): `~/anyjev-venv/bin/python hosts/lil-homie/llm/verify_decisions.py`. It prints
+probabilities, order-flip counts and latency.
 
 Measured on 2026-11-02 (22 choice questions, 14 of them ambiguous, then the same with the
 options reversed):
